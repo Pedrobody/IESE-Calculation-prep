@@ -88,6 +88,11 @@
   .pips{display:flex;gap:6px;margin-top:9px}
   .pip{flex:1;height:6px;border-radius:99px;background:var(--box-gray)}
   .pip.on{background:var(--red)}
+  /* medidor de rendimiento reciente (subir/bajar de nivel) */
+  .perfmeter{position:relative;height:13px;border-radius:99px;background:var(--box-gray);border:1px solid var(--hairline)}
+  .perf-fill{height:100%;border-radius:99px;background:var(--red);width:0;transition:width .35s,background .3s}
+  .perf-fill.danger{background:var(--graphite)}
+  .perf-tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--graphite);opacity:.65}
   .pip.warn{background:#f0b4b8}
 
   /* Play area */
@@ -210,6 +215,21 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .legend i{width:16px;height:4px;border-radius:2px;display:inline-block}
+
+  /* ===== Aprender (mapa de técnicas) ===== */
+  .trow{display:flex;align-items:center;gap:11px;padding:13px 4px;border:none;border-bottom:1px solid var(--hairline);background:none;width:100%;cursor:pointer;text-align:left;font-family:var(--font);font-size:14px;color:var(--ink)}
+  .trow:last-child{border-bottom:none}
+  .trow:active{background:var(--box-gray)}
+  .tdot{width:10px;height:10px;border-radius:50%;flex:none}
+  .tdot.done{background:var(--red)} .tdot.prog{background:#ef9aa0} .tdot.weak{background:var(--graphite)} .tdot.none{background:var(--paper);border:1.5px solid var(--hairline)}
+  .trow .tn{font-weight:700;flex:1;min-width:0}
+  .trow .tm{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .trow .tm b{color:var(--ink)}
+  .trow .chev{color:var(--muted);font-size:20px;flex:none;line-height:1}
+  .backlink{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;margin-bottom:12px;display:inline-flex;align-items:center;gap:6px;font-weight:700}
+  .backlink:active{color:var(--red)}
+  .lessonblock{margin-bottom:16px}
+  .lessonblock h4{font-size:13px;margin:0 0 6px;color:var(--red);text-transform:uppercase;letter-spacing:.06em}
 </style>
 </head>
 <body>
@@ -586,8 +606,12 @@
         '<div class="feedback" id="hFb">&nbsp;</div>'+
         keypadHTML()+
         '<div class="miniact"><button id="hSkip">Saltar</button><button id="hPause">⏸ Pausar</button><button id="hGuide">📋 Niveles</button></div>'+
-        '<div class="pips" id="hPips" style="margin-top:14px"></div>'+
-        '<div class="note">Sube y baja de nivel según tu <b>rendimiento reciente</b> (acierto + velocidad). Ir lento también baja; pausar protege tu progreso.</div>'+
+        '<div style="margin-top:16px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px"><span id="hPerfMsg" style="font-size:11px;font-weight:800;letter-spacing:.02em">&nbsp;</span><span id="hPerfN" class="note" style="margin:0"></span></div>'+
+          '<div class="perfmeter"><div class="perf-fill" id="hPerfFill"></div><div class="perf-tick" style="left:42%"></div><div class="perf-tick" style="left:74%"></div></div>'+
+          '<div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);margin-top:4px"><span>🔽 bajas</span><span>subes 🔼</span></div>'+
+        '</div>'+
+        '<div class="note">Este medidor es tu <b>rendimiento reciente</b> (acierto + velocidad de tus últimas respuestas). Sube al acertar rápido y baja al fallar o ir lento; al pasar la marca de la derecha subes de nivel, y por debajo de la izquierda bajas. Pausar protege tu progreso.</div>'+
       '</div>'+
       '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px" id="achSum">🏅 Logros — '+Object.keys(p.ach).length+'/'+ACHS.length+'</summary><div class="ach-grid" id="achGrid" style="margin-top:12px">'+achGridHTML()+'</div></details>';
 
@@ -598,9 +622,16 @@
       $("#hAvg").innerHTML=ses.count?(ses.total/ses.count).toFixed(1)+'<small>s</small>':'—';
       $("#hAcc").textContent=ses.count?Math.round(ses.correct/ses.count*100)+'%':'—';
       $("#hCombo").innerHTML=ses.combo>1?'🔥 Racha ×'+ses.combo:'&nbsp;';
-      var pips=''; var need=MINSAMP; var pf=windowPerf();
-      for(var i=0;i<WIN;i++){ var cls=i<p.win.length?'on':''; pips+='<span class="pip '+cls+'"></span>'; }
-      $("#hPips").innerHTML=pips;
+      var pf=windowPerf(), n=p.win.length;
+      var fill=$("#hPerfFill"); fill.style.width=Math.round(pf*100)+'%';
+      fill.classList.toggle('danger', n>=MINSAMP && pf<=DEMOTE+0.06);
+      $("#hPerfN").textContent=n+'/'+WIN+' respuestas';
+      var msg,col='var(--ink)';
+      if(n<MINSAMP){ msg='Calibrando nivel · '+n+'/'+MINSAMP; col='var(--muted)'; }
+      else if(pf>=PROMOTE-0.10){ msg='🔼 A punto de subir de nivel'; col='var(--red)'; }
+      else if(pf<=DEMOTE+0.06){ msg='🔽 Riesgo de bajar de nivel'; col='var(--red)'; }
+      else { msg='Mantén el ritmo'; col='var(--muted)'; }
+      var mEl=$("#hPerfMsg"); mEl.textContent=msg; mEl.style.color=col;
     }
     function windowPerf(){ if(!p.win.length)return 0; return p.win.reduce(function(a,b){return a+b;},0)/p.win.length; }
     function startTimer(target){ cancelAnimationFrame(raf); var bar=$("#hTimer"); if(!bar)return;
@@ -809,27 +840,97 @@
     ['pct-estimate','Porcentajes','Estimar','Redondea % y base para estimar rápido; en un caso, pregunta si vale estimar.']
   ];
   var EXGEN={'mult-zeros':function(){return GEN.multZeros(4);},'mult-comp':function(){return GEN.multComp(3);},'mult-complex':function(){return GEN.multComplex(4);},'mult-square':function(){return GEN.multSquare(3);},'div-zeros':function(){return GEN.divZeros(3);},'div-break':function(){return GEN.divBreak(3);},'div-factor':function(){var b=rpick([45,55,65,75]);return mkDiv(b*b,b,'div-factor');},'pct-comp':function(){return GEN.pctComp(4);},'pct-estimate':function(){return GEN.pctEstimate(3);}};
+  var LEARN_WHEN={
+    'mult-zeros':'Cuando algún número es redondo o acaba en ceros (200, 1.500, o ×2,5 / ×7,5).',
+    'mult-comp':'Para multiplicar dos números de 2 cifras de cabeza.',
+    'mult-complex':'Cuando uno tiene 3 cifras: descomponlo en partes manejables.',
+    'mult-square':'Al elevar al cuadrado; los que acaban en 5 son inmediatos.',
+    'div-zeros':'Cuando dividendo y divisor comparten ceros: cancélalos primero.',
+    'div-break':'Divisor pequeño (3–8): parte el número en trozos que salgan limpios.',
+    'div-factor':'Divisor con factores (12 = 3×4) o cuando el dividendo es un cuadrado.',
+    'pct-comp':'Casi cualquier %: combina 10% y 1% (40% = 4×10%, 3% = 3×1%).',
+    'pct-estimate':'% incómodos sobre bases grandes cuando basta una buena estimación.'
+  };
+  function learnMastery(key){ var e=db.stats.byStrat[key];
+    if(!e||e.n<5) return {lab:(e&&e.n)?'Poco practicado':'Sin practicar', cls:'none', n:e?e.n:0};
+    var a=e.ok/e.n, cls=a>=0.85?'done':(a>=0.70?'prog':'weak'), lab=a>=0.85?'Dominado':(a>=0.70?'En progreso':'A mejorar');
+    return {lab:lab, cls:cls, acc:Math.round(a*100), t:e.sum/e.n, n:e.n}; }
+
   function renderLearn(){
-    var curOp='mult',cur=null,revealed=false;
-    var opGen={mult:function(){return rpick([function(){return GEN.multZeros(3);},function(){return GEN.multComp(3);},function(){return GEN.multSquare(3);},function(){return GEN.multComplex(4);}])();},div:function(){return rpick([function(){return GEN.divZeros(3);},function(){return GEN.divBreak(3);},function(){return GEN.divFactor(4);}])();},pct:function(){return rpick([function(){return GEN.pctComp(3);},function(){return GEN.pctComp(4);}])();}};
-    function paint(){
+    var CATS=[['Multiplicación','×'],['División','÷'],['Porcentajes','%']];
+    function paintMap(){
+      keydownHandler=null;
+      var groups=CATS.map(function(c){
+        var rows=STRATDEFS.filter(function(s){return s[1]===c[0];}).map(function(s){
+          var m=learnMastery(s[0]);
+          var right = m.cls==='none' ? '<span class="tm">'+esc(m.lab)+'</span>' : '<span class="tm"><b>'+m.acc+'%</b> · '+m.t.toFixed(1)+'s<br>'+esc(m.lab)+'</span>';
+          return '<button class="trow" data-key="'+s[0]+'"><span class="tdot '+m.cls+'"></span><span class="tn">'+esc(s[2])+'</span>'+right+'<span class="chev">›</span></button>';
+        }).join('');
+        return '<div class="card"><span class="kicker">'+c[1]+' '+esc(c[0])+'</span>'+rows+'</div>';
+      }).join('');
       app.innerHTML=
-        '<div class="sechead"><div><div class="kicker">Práctica guiada</div><h2>Aprender</h2></div><div class="rule"></div></div>'+
-        '<div class="card"><span class="kicker">Cómo funciona</span><p style="margin:0">Elige una operación, intenta resolverla mentalmente y pulsa <b>Ver cómo resolverlo</b> para la estrategia paso a paso. Debajo, la biblioteca completa.</p></div>'+
-        '<div class="card" style="text-align:center">'+
-          '<div class="seg" style="margin-bottom:14px">'+[['mult','×'],['div','÷'],['pct','%'],['rand','🎲']].map(function(o){return '<button data-op="'+o[0]+'" class="'+(curOp===o[0]?'on':'')+'">'+o[1]+'</button>';}).join('')+'</div>'+
-          '<div class="learnq" id="lnQ">'+(cur?cur.text:'—')+'</div>'+
-          '<div id="lnReveal">'+(revealed&&cur?workedHTML(cur):'')+'</div>'+
-          '<div class="row" style="justify-content:center;margin-top:12px"><button class="btn red" id="lnShow">Ver cómo resolverlo</button><button class="btn ghost" id="lnNext">Otro problema</button></div>'+
-        '</div>'+
-        '<div class="card"><span class="kicker">Biblioteca de estrategias · Mental Math (MBB)</span>'+STRATDEFS.map(function(s){return '<details class="strat"><summary>'+s[2]+'<span class="stag">'+s[1]+'</span></summary><div class="body"><p style="margin:0 0 4px">'+s[3]+'</p><button class="btn ghost" data-ex="'+s[0]+'" style="margin-top:6px">Ver ejemplo</button><div class="exout"></div></div></details>';}).join('')+'</div>';
-      document.querySelectorAll('.seg [data-op]').forEach(function(b){ b.onclick=function(){ curOp=b.dataset.op; newP(); }; });
-      $("#lnShow").onclick=function(){ revealed=true; if(cur)$("#lnReveal").innerHTML=workedHTML(cur); };
-      $("#lnNext").onclick=newP;
-      document.querySelectorAll('[data-ex]').forEach(function(b){ b.onclick=function(){ var p=EXGEN[b.dataset.ex](); b.closest('.body').querySelector('.exout').innerHTML=workedHTML(p); }; });
+        '<div class="sechead"><div><div class="kicker">Técnicas · Mental Math (MBB)</div><h2>Aprender</h2></div><div class="rule"></div></div>'+
+        '<div class="card"><p style="margin:0">Aprende cada técnica de cálculo mental, mira un ejemplo resuelto y <b>practícala por separado</b>. El puntito muestra tu maestría: <span class="tdot none" style="display:inline-block;vertical-align:middle"></span> sin practicar · <span class="tdot weak" style="display:inline-block;vertical-align:middle"></span> a mejorar · <span class="tdot prog" style="display:inline-block;vertical-align:middle"></span> en progreso · <span class="tdot done" style="display:inline-block;vertical-align:middle"></span> dominado.</p></div>'+
+        groups;
+      app.querySelectorAll('.trow').forEach(function(b){ b.onclick=function(){ paintLesson(b.dataset.key); }; });
     }
-    function newP(){ cur=curOp==='rand'?rpick([opGen.mult,opGen.div,opGen.pct])():opGen[curOp](); revealed=false; paint(); }
-    newP();
+    function paintLesson(key){
+      keydownHandler=null;
+      var def=STRATDEFS.filter(function(s){return s[0]===key;})[0]; if(!def) return paintMap();
+      var m=learnMastery(key), ex=EXGEN[key]();
+      var masteryHTML = m.cls==='none'
+        ? '<p class="note" style="margin:0">Aún no tienes datos de esta técnica. Practícala para medir tu maestría.</p>'
+        : '<div class="pbar-row" style="margin:0"><div class="pl">'+esc(m.lab)+'</div><div class="pbar-track"><div class="pbar-fill" style="width:'+m.acc+'%"></div><div class="pbar-tick" style="left:85%"></div></div><div class="pbar-val"><b>'+m.acc+'%</b> · '+m.t.toFixed(1)+'s · '+m.n+'</div></div>';
+      app.innerHTML=
+        '<button class="backlink" id="lnBack">← Todas las técnicas</button>'+
+        '<div class="sechead"><div><div class="kicker">'+esc(def[1])+'</div><h2>'+esc(def[2])+'</h2></div><div class="rule"></div></div>'+
+        '<div class="card">'+
+          '<div class="lessonblock"><h4>La idea</h4><p style="margin:0">'+esc(def[3])+'</p></div>'+
+          '<div class="lessonblock"><h4>Cuándo usarla</h4><p style="margin:0">'+esc(LEARN_WHEN[key]||'')+'</p></div>'+
+          '<div class="lessonblock"><h4>Ejemplo resuelto</h4><div id="lnEx">'+workedHTML(ex)+'</div><button class="btn ghost" id="lnOther" style="margin-top:8px">Otro ejemplo</button></div>'+
+          '<div class="lessonblock"><h4>Tu maestría</h4>'+masteryHTML+'</div>'+
+          '<button class="btn red block" id="lnDrill">Practicar 10 de esta técnica</button>'+
+        '</div>';
+      $("#lnBack").onclick=paintMap;
+      $("#lnOther").onclick=function(){ $("#lnEx").innerHTML=workedHTML(EXGEN[key]()); };
+      $("#lnDrill").onclick=function(){ runDrill(key); };
+    }
+    function runDrill(key){
+      var def=STRATDEFS.filter(function(s){return s[0]===key;})[0], N=10, idx=0, correct=0, totalT=0, cur=null, shownAt=0;
+      function screen(){
+        app.innerHTML=
+          '<div class="sechead"><div><div class="kicker">Practicando · '+esc(def[2])+'</div><h2 id="dQn">1/'+N+'</h2></div><div class="rule"></div></div>'+
+          '<div class="card play">'+
+            '<div id="dEst"></div>'+
+            '<div class="problem" id="dProblem">—</div>'+
+            '<div class="answer empty" id="dAns">tu respuesta</div>'+
+            '<div class="feedback" id="dFb">&nbsp;</div>'+
+            keypadHTML()+
+            '<div class="miniact"><button id="dQuit">Salir</button></div>'+
+          '</div>';
+        $("#keypad").addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(b)input.press(b.dataset.k); });
+        $("#dQuit").onclick=function(){ paintLesson(key); };
+      }
+      var input=makeInput(function(){return $("#dAns");}, answer);
+      function show(){ cur=EXGEN[key](); $("#dQn").textContent=(idx+1)+'/'+N; $("#dEst").innerHTML=cur.estimate?'<span class="tag-est">≈ estima (±2%)</span>':''; var pr=$("#dProblem"); pr.textContent=cur.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop'); input.clear(); shownAt=performance.now(); }
+      function answer(raw){ if(!cur)return; var val=parseAns(raw); if(val==null)return; var dt=(performance.now()-shownAt)/1000, ok=isCorrect(cur,val);
+        if(ok)correct++; totalT+=dt; recordAttempt(cur, ok, dt, 0, 'learn');
+        var fb=$("#dFb"); fb.className='feedback '+(ok?'ok':'bad'); fb.textContent=(ok?'✓ ':'✗ ')+cur.text+' = '+fmt(cur.ans)+(ok?' · '+dt.toFixed(1)+'s':'');
+        idx++; save(); var t=cur; cur=null; if(idx<N){ setTimeout(show,750); } else { setTimeout(finish,850); } }
+      function finish(){ var m=learnMastery(key);
+        app.innerHTML=
+          '<div class="sechead"><div><div class="kicker">Práctica terminada</div><h2>'+esc(def[2])+'</h2></div><div class="rule"></div></div>'+
+          '<div class="card"><div class="bigkpi"><div class="v">'+Math.round(correct/N*100)+'%</div><div class="l">aciertos ('+correct+'/'+N+')</div></div>'+
+            '<div class="hud" style="margin-top:14px"><div class="c"><div class="lab">Media</div><div class="val">'+(totalT/N).toFixed(1)+'<small>s</small></div></div><div class="c"><div class="lab">Maestría</div><div class="val" style="font-size:15px">'+esc(m.lab)+'</div></div></div>'+
+            '<div class="row" style="margin-top:14px"><button class="btn red block" id="dAgain">Practicar 10 más</button><button class="btn ghost block" id="dBack">Volver a la técnica</button></div>'+
+          '</div>';
+        $("#dAgain").onclick=function(){ runDrill(key); };
+        $("#dBack").onclick=function(){ paintLesson(key); };
+      }
+      keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} else if(e.key===','||e.key==='.')input.press(','); };
+      screen(); show();
+    }
+    paintMap();
   }
 
   /* ============ ONBOARDING (crear cuenta / entrar) ============ */
