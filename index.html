@@ -476,7 +476,7 @@
     var totalN=OPS.reduce(function(a,o){ return a+((s.byOp[o[0]]||{}).n||0); },0);
     if(!totalN){
       app.innerHTML='<div class="sechead"><div><div class="kicker">Tu rendimiento</div><h2>Progreso</h2></div><div class="rule"></div></div>'+
-        '<div class="card"><div class="empty" style="border:none;padding:30px 10px"><div class="big" style="font-weight:800;font-size:15px;margin-bottom:6px">Aún no hay datos</div><div class="muted">Entrena o juega un Reto y aquí verás tu precisión, tus tiempos por tipo, tu evolución y en qué mejorar.</div><div style="margin-top:16px"><button class="btn red" id="pGo">Ir a entrenar</button></div></div></div>';
+        '<div class="card"><div class="empty" style="border:none;padding:30px 10px"><div class="big" style="font-weight:800;font-size:15px;margin-bottom:6px">Aún no hay datos</div><div class="muted">Entrena o juega un Reto y aquí verás tu rendimiento por dificultad y por técnica, tu evolución y en qué mejorar.</div><div style="margin-top:16px"><button class="btn red" id="pGo">Ir a entrenar</button></div></div></div>';
       $("#pGo").onclick=function(){ setView('train'); };
       return;
     }
@@ -484,37 +484,39 @@
     var totSum=OPS.reduce(function(a,o){ return a+((s.byOp[o[0]]||{}).sum||0); },0);
     var gAcc=Math.round(totOk/totalN*100), gAvg=(totSum/totalN);
 
-    // --- precisión por tipo ---
-    var accRows=OPS.map(function(o){ var e=s.byOp[o[0]]; if(!e||!e.n) return ''; var a=Math.round(acc(e)*100), tgt=OBJ[o[0]].acc;
-      return '<div class="pbar-row"><div class="pl">'+o[2]+' '+esc(o[1])+'</div><div class="pbar-track"><div class="pbar-fill'+(a<tgt?' ':'')+'" style="width:'+a+'%"></div><div class="pbar-tick" style="left:'+tgt+'%"></div></div><div class="pbar-val"><b>'+a+'%</b> · '+e.n+'</div></div>'; }).join('');
-    // --- tiempo medio por tipo (barra escala 0..15s, marca objetivo) ---
-    var TMAX=15;
-    var timeRows=OPS.map(function(o){ var e=s.byOp[o[0]]; if(!e||!e.n) return ''; var t=avgT(e), tgt=OBJ[o[0]].t, w=Math.min(100,t/TMAX*100), good=t<=tgt;
-      return '<div class="pbar-row"><div class="pl">'+o[2]+' '+esc(o[1])+'</div><div class="pbar-track"><div class="pbar-fill'+(good?' dim':'')+'" style="width:'+w.toFixed(0)+'%"></div><div class="pbar-tick" style="left:'+(tgt/TMAX*100).toFixed(0)+'%"></div></div><div class="pbar-val"><b>'+t.toFixed(1)+'s</b> · obj '+tgt+'s</div></div>'; }).join('');
+    // --- por DIFICULTAD (agrupado por tramos de nivel; el rendimiento solo se compara a igual dificultad) ---
+    var TIERS=[['Básico','niveles 1–3',[1,2,3]],['Intermedio','niveles 4–6',[4,5,6]],['Avanzado','niveles 7–8',[7,8]],['Examen','niveles 9–10',[9,10]]];
+    var tierAgg=TIERS.map(function(){return {n:0,ok:0,sum:0};});
+    h.forEach(function(a){ for(var i=0;i<TIERS.length;i++){ if(TIERS[i][2].indexOf(a.lv)>=0){ tierAgg[i].n++; if(a.ok)tierAgg[i].ok++; tierAgg[i].sum+=a.t; break; } } });
+    var tierRows=TIERS.map(function(T,i){ var e=tierAgg[i]; if(!e.n) return ''; var a=Math.round(acc(e)*100);
+      return '<div class="pbar-row"><div class="pl">'+esc(T[0])+'<br><span class="note" style="margin:0;font-weight:400;font-size:10px">'+esc(T[1])+'</span></div><div class="pbar-track"><div class="pbar-fill" style="width:'+a+'%"></div><div class="pbar-tick" style="left:85%"></div></div><div class="pbar-val"><b>'+a+'%</b> · '+avgT(e).toFixed(1)+'s · '+e.n+'</div></div>'; }).join('');
 
     // --- tendencia por día (precisión) ---
     var byDay={}; h.forEach(function(a){ var d=new Date(a.ts); var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); (byDay[k]=byDay[k]||{n:0,ok:0,sum:0}); byDay[k].n++; if(a.ok)byDay[k].ok++; byDay[k].sum+=a.t; });
     var days=Object.keys(byDay).sort().slice(-10);
     var trendPts=days.map(function(k){ var e=byDay[k]; var dd=k.split('-'); return {label:dd[2]+'/'+dd[1], v:e.ok/e.n}; });
 
-    // --- por estrategia ---
-    var stratKeys=Object.keys(s.byStrat).filter(function(k){ return s.byStrat[k].n>=3; })
+    // --- por TÉCNICA (cada técnica ≈ dificultad homogénea; desplegable con su explicación) ---
+    function stratDesc(k){ var d=STRATDEFS.filter(function(x){return x[0]===k;})[0]; return d?d[3]:''; }
+    var stratKeys=Object.keys(s.byStrat).filter(function(k){ return s.byStrat[k].n>=3 && STRAT_NAME[k]; })
       .sort(function(a,b){ return acc(s.byStrat[a])-acc(s.byStrat[b]); });
-    var stratRows=stratKeys.map(function(k){ var e=s.byStrat[k], a=Math.round(acc(e)*100), t=avgT(e), weak=a<75;
-      return '<tr><td><span class="dot '+(weak?'weak':'ok')+'"></span>'+esc(STRAT_NAME[k]||k)+'</td><td>'+e.n+'</td><td>'+a+'%</td><td>'+t.toFixed(1)+'s</td></tr>'; }).join('');
+    var techCards=stratKeys.map(function(k){ var e=s.byStrat[k], a=Math.round(acc(e)*100), t=avgT(e), weak=a<75;
+      var ex=''; try{ ex=workedHTML(EXGEN[k]()); }catch(_){}
+      return '<details class="strat"><summary>'+
+        '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(weak?'var(--red)':'#bdbdbd')+';flex:none"></span>'+
+        '<span>'+esc(STRAT_NAME[k])+'</span>'+
+        '<span style="margin-left:auto;font-variant-numeric:tabular-nums;color:'+(weak?'var(--red)':'var(--muted)')+';font-weight:800;font-size:12.5px">'+a+'% · '+t.toFixed(1)+'s · '+e.n+'</span></summary>'+
+        '<div class="body"><p style="margin:0 0 2px"><b>¿En qué consiste?</b> '+esc(stratDesc(k))+'</p>'+ex+
+        '<button class="btn ghost" data-learn="1" style="margin-top:10px">Practicar en Aprender</button></div></details>'; }).join('');
 
-    // --- recomendación: tipo/estrategia más flojo con datos suficientes ---
+    // --- recomendación: técnica más floja con datos suficientes ---
     var reco='';
-    var cand=OPS.map(function(o){return {key:o[0],name:o[1],e:s.byOp[o[0]]};}).filter(function(c){return c.e&&c.e.n>=8;});
-    if(cand.length){ cand.sort(function(a,b){ return (acc(a.e)-OBJ[a.key].acc/100) - (acc(b.e)-OBJ[b.key].acc/100); });
-      var w=cand[0]; var wa=Math.round(acc(w.e)*100), wt=avgT(w.e).toFixed(1);
-      // estrategia más floja dentro de ese tipo
-      var ws=stratKeys.filter(function(k){return STRAT_OP[k]===w.key;})[0];
-      reco='<div class="reco"><b>Tu punto más flojo: '+esc(w.name)+'</b> — '+wa+'% de aciertos, '+wt+'s de media (objetivo '+OBJ[w.key].acc+'% y '+OBJ[w.key].t+'s).'+
-        (ws?' Sobre todo en <b>'+esc(STRAT_NAME[ws])+'</b>.':'')+
-        '<div style="margin-top:10px"><button class="btn red" id="pReco">Repasar esta técnica en Aprender</button></div></div>';
+    if(stratKeys.length && s.byStrat[stratKeys[0]].n>=6){
+      var wk=stratKeys[0], we=s.byStrat[wk], wa=Math.round(acc(we)*100), wt=avgT(we).toFixed(1);
+      reco='<div class="reco"><b>Tu técnica más floja: '+esc(STRAT_NAME[wk])+'</b> — '+wa+'% de aciertos y '+wt+'s de media. Repásala arriba y practícala.'+
+        '<div style="margin-top:10px"><button class="btn red" id="pReco">Ver esta técnica en Aprender</button></div></div>';
     } else {
-      reco='<div class="reco" style="background:var(--box-gray);border-color:var(--hairline)"><b style="color:var(--ink)">Sigue practicando</b> — con unos cuantos problemas más de cada tipo te diré exactamente en qué enfocarte.</div>';
+      reco='<div class="reco" style="background:var(--box-gray);border-color:var(--hairline)"><b style="color:var(--ink)">Sigue practicando</b> — con unos cuantos problemas más de cada técnica te diré exactamente en qué enfocarte.</div>';
     }
 
     var rf=rankFor(p.xp||0), rpct=rf.nx?Math.min(100,((p.xp-rf.r.xp)/(rf.nx.xp-rf.r.xp))*100):100;
@@ -528,14 +530,14 @@
         '<div style="text-align:right;flex:none"><div style="font-size:17px;font-weight:800;font-variant-numeric:tabular-nums">'+fmt(p.xp||0)+'</div><div class="note" style="margin:0">'+(rf.nx?'/ '+fmt(rf.nx.xp)+' XP':'XP máx')+'</div></div>'+
       '</div></div>'+
       '<div class="hud"><div class="c"><div class="lab">Resueltos</div><div class="val">'+totalN+'</div></div><div class="c"><div class="lab">Precisión</div><div class="val">'+gAcc+'<small>%</small></div></div><div class="c"><div class="lab">Media</div><div class="val">'+gAvg.toFixed(1)+'<small>s</small></div></div></div>'+
-      '<div class="card"><span class="kicker">Precisión por tipo</span><p class="note" style="margin:-4px 0 12px">La marca gris es el objetivo ('+ '85%).</p>'+accRows+'</div>'+
-      '<div class="card"><span class="kicker">Tiempo medio por tipo</span><p class="note" style="margin:-4px 0 12px">Más corto es mejor. La marca gris es el tiempo objetivo.</p>'+timeRows+'</div>'+
+      (tierRows?'<div class="card"><span class="kicker">Por dificultad</span><p class="note" style="margin:-4px 0 12px">Tu acierto y tiempo en cada tramo de nivel. Aquí sí es comparable: mismo tramo = misma dificultad. La marca gris es el objetivo (85%).</p>'+tierRows+'</div>':'')+
+      (techCards?'<div class="card"><span class="kicker">Por técnica</span><p class="note" style="margin:-4px 0 12px">De más floja a mejor (punto rojo = por debajo del 75%). Toca cada una para ver <b>en qué consiste</b> y un ejemplo.</p>'+techCards+'</div>':'')+
       '<div class="card"><span class="kicker">Evolución (precisión por día)</span>'+sparkline(trendPts,function(p){return Math.round(p.v*100)+'%';})+'</div>'+
-      (stratRows?'<div class="card"><span class="kicker">Por técnica</span><p class="note" style="margin:-4px 0 10px">Ordenado de más flojo a mejor. Punto rojo = por debajo del 75%.</p><table class="ptable"><thead><tr><th>Técnica</th><th>N</th><th>Aciertos</th><th>Media</th></tr></thead><tbody>'+stratRows+'</tbody></table></div>':'')+
       '<div class="card">'+reco+'</div>';
 
     $("#pReco") && ($("#pReco").onclick=function(){ setView('learn'); });
     $("#pRankCard") && ($("#pRankCard").onclick=openRankGuide);
+    app.querySelectorAll('[data-learn]').forEach(function(b){ b.onclick=function(){ setView('learn'); }; });
   }
 
   /* ---------- teclado numérico ---------- */
@@ -735,32 +737,50 @@
   }
   function fetchScores(id){
     if(!sbReady())return Promise.reject(new Error('ranking no configurado'));
-    var url=CFG.SUPABASE_URL+'/rest/v1/scores?select=nick,section,score,client_id&challenge_id=eq.'+encodeURIComponent(id)+'&order=score.desc&limit=500';
+    var url=CFG.SUPABASE_URL+'/rest/v1/scores?select=nick,section,score&challenge_id=eq.'+encodeURIComponent(id)+'&order=score.desc&limit=3000';
     return fetch(url,{headers:sbHeaders()}).then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); });
   }
   var rankFilter="global";
   function renderRanking(){
     var id=todayISO();
-    var secBtns=['global','mine'].concat(SECTIONS).map(function(s){ var lab=s==='global'?'🌍 Global':(s==='mine'?'👤 Mi sección':'Sec. '+s); return '<button class="'+(rankFilter===s?'on':'')+'" data-f="'+s+'">'+lab+'</button>'; }).join('');
+    var secBtns=['global'].concat(SECTIONS).map(function(s){ var lab=s==='global'?'🌍 Global':'Sección '+s; return '<button class="'+(rankFilter===s?'on':'')+'" data-f="'+s+'">'+lab+'</button>'; }).join('');
     app.innerHTML=
       '<div class="sechead"><div><div class="kicker">Clasificación</div><h2>Ranking · Reto de hoy</h2></div><div class="rule"></div></div>'+
-      (sbReady()?'':'<div class="card"><b>Ranking online no configurado.</b><p class="note" style="margin-bottom:0">Falta pegar la clave <code>anon public</code> de Supabase en <code>config.js</code>. Mientras tanto puedes entrenar y jugar el reto en local.</p></div>')+
+      (sbReady()?'':'<div class="card"><b>Ranking online no configurado.</b><p class="note" style="margin-bottom:0">Falta pegar la clave pública de Supabase en <code>config.js</code>.</p></div>')+
       '<div class="filterbar">'+secBtns+'</div>'+
+      (rankFilter==='global'?'<div class="card" id="secCard"><span class="kicker">Competición por secciones</span><p class="note" style="margin:0">Cargando…</p></div>':'')+
       '<div class="card" id="lbCard"><p class="note" style="margin:0">'+(sbReady()?'Cargando ranking…':'Sin datos online.')+'</p></div>';
     document.querySelectorAll('.filterbar button').forEach(function(b){ b.onclick=function(){ rankFilter=b.dataset.f; renderRanking(); }; });
     if(!sbReady())return;
     fetchScores(id).then(function(rows){
-      // mejor marca por persona (por nombre normalizado, mismo usuario en cualquier dispositivo)
+      // mejor marca por persona (por nombre normalizado; mismo usuario en cualquier dispositivo)
       var best={}; rows.forEach(function(r){ var k=(r.nick||'').trim().toLowerCase(); if(!best[k]||r.score>best[k].score)best[k]=r; });
-      var list=Object.keys(best).map(function(k){return best[k];});
-      if(rankFilter!=='global'){ var sec=rankFilter==='mine'?db.profile.section:rankFilter; list=list.filter(function(r){return r.section===sec;}); }
+      var all=Object.keys(best).map(function(k){return best[k];});
+      var mine=db.profile;
+
+      // --- competición por secciones (siempre desde el total, en la vista global) ---
+      var secCard=$("#secCard");
+      if(secCard){
+        var agg={}; all.forEach(function(r){ var s=(r.section||'?'); (agg[s]=agg[s]||{n:0,total:0}); agg[s].n++; agg[s].total+=r.score; });
+        var secList=Object.keys(agg).map(function(s){ return {sec:s,n:agg[s].n,total:agg[s].total,avg:Math.round(agg[s].total/agg[s].n)}; }).sort(function(a,b){return b.total-a.total;});
+        if(!secList.length){ secCard.innerHTML='<span class="kicker">Competición por secciones</span><p class="note" style="margin:6px 0 0">Aún sin marcas hoy.</p>'; }
+        else{
+          var secRows=secList.map(function(r,i){ var me=r.sec===mine.section; var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+            return '<tr class="'+(me?'me':'')+'"><td class="pos">'+medal+'</td><td>Sección '+esc(r.sec)+'</td><td style="text-align:right">'+r.n+'</td><td style="text-align:right;color:var(--muted)">'+fmt(r.avg)+'</td><td style="text-align:right;font-weight:800">'+fmt(r.total)+'</td></tr>'; }).join('');
+          secCard.innerHTML='<span class="kicker">Competición por secciones</span><p class="note" style="margin:-4px 0 10px">Puntos totales del reto de hoy (suma de la mejor marca de cada estudiante). ¡Que gane tu sección!</p>'+
+            '<table class="lb"><thead><tr><th>#</th><th>Sección</th><th style="text-align:right">Estud.</th><th style="text-align:right">Media</th><th style="text-align:right">Total</th></tr></thead><tbody>'+secRows+'</tbody></table>';
+        }
+      }
+
+      // --- ranking individual (filtrado) ---
+      var list=all.slice();
+      if(rankFilter!=='global'){ list=list.filter(function(r){return r.section===rankFilter;}); }
       list.sort(function(a,b){return b.score-a.score;});
       if(!list.length){ $("#lbCard").innerHTML='<p class="note" style="margin:0">Aún no hay marcas'+(rankFilter==='global'?'':' en esta sección')+'. ¡Sé el primero en el <b>Reto</b>!</p>'; return; }
-      var mine=db.profile;
-      var body=list.slice(0,100).map(function(r,i){ var me=((r.nick||'').trim().toLowerCase()===(mine.nick||'').trim().toLowerCase());
+      var body=list.slice(0,150).map(function(r,i){ var me=((r.nick||'').trim().toLowerCase()===(mine.nick||'').trim().toLowerCase());
         var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
         return '<tr class="'+(me?'me':'')+'"><td class="pos">'+(medal?'<span class="medal">'+medal+'</span>':(i+1))+'</td><td>'+esc(r.nick)+(rankFilter==='global'?'<span class="sec">'+esc(r.section)+'</span>':'')+'</td><td style="text-align:right;font-weight:800">'+fmt(r.score)+'</td></tr>'; }).join('');
-      $("#lbCard").innerHTML='<table class="lb"><thead><tr><th>#</th><th>Estudiante</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'+body+'</tbody></table>';
+      $("#lbCard").innerHTML='<div class="kicker" style="display:block;margin-bottom:8px">'+(rankFilter==='global'?'Ranking individual':'Sección '+esc(rankFilter))+'</div><table class="lb"><thead><tr><th>#</th><th>Estudiante</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'+body+'</tbody></table>';
     }).catch(function(err){ $("#lbCard").innerHTML='<p class="note" style="margin:0">⚠️ No se pudo cargar el ranking: '+esc(err.message||'error')+'</p>'; });
   }
 
