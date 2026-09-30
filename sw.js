@@ -2,7 +2,7 @@
    Estrategia: network-first para HTML/JS (así los estudiantes reciben
    actualizaciones al reconectar) con fallback a caché; cache-first para iconos.
    Sube CACHE_VER cuando publiques cambios para forzar refresco. */
-const CACHE_VER = "iese-calc-v9";
+const CACHE_VER = "iese-calc-v10";
 const CORE = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
