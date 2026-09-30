@@ -32,8 +32,8 @@
   .muted{color:var(--muted)}
   .hidden{display:none !important}
 
-  /* Header */
-  header.app{background:var(--paper);border-bottom:3px solid var(--red);position:sticky;top:0;z-index:30}
+  /* Header (no fijo) */
+  header.app{background:var(--paper);border-bottom:3px solid var(--red)}
   .bar{max-width:680px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
   .bar .mark{width:30px;height:30px;border-radius:7px;background:var(--red);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
   .bar h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.01em;white-space:nowrap}
@@ -46,7 +46,7 @@
   .gear{border:1px solid var(--hairline);background:var(--paper);width:36px;height:36px;border-radius:9px;font-size:17px;cursor:pointer;color:var(--ink);flex:none}
   .gear:active{background:var(--box-gray)}
 
-  main{flex:1;max-width:680px;width:100%;margin:0 auto;padding:16px 16px calc(var(--navh) + 24px + env(safe-area-inset-bottom));min-height:0}
+  main{flex:1;max-width:680px;width:100%;margin:0 auto;padding:16px 16px calc(var(--navh) + 56px + env(safe-area-inset-bottom));min-height:0}
 
   /* Bottom nav */
   nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:1px solid var(--hairline);
@@ -359,24 +359,46 @@
 
   /* ---------- estado persistente ---------- */
   var db=load();
-  function load(){
-    var d={};
-    try{ var raw=localStorage.getItem(KEY); if(raw)d=JSON.parse(raw); }catch(e){}
+  function normalize(d){
     d.profile=d.profile||null;
+    d.auth=d.auth||null;           // {nick,pin} cuando hay sesión iniciada en este dispositivo
     d.prog=d.prog||{};
     var p=d.prog;
     p.level=p.level||1; p.win=p.win||[]; p.xp=p.xp||0; p.solved=p.solved||0; p.correct=p.correct||0;
     p.bestStreak=p.bestStreak||0; p.maxLevel=p.maxLevel||1; p.ach=p.ach||{}; p.days=p.days||[]; p.byType=p.byType||{mult:0,div:0,pct:0};
     delete d.free;                 // "Práctica libre" retirada de esta app
-    d.stats=d.stats||{};           // registro interno de rendimiento (base del panel de Progreso)
-    d.stats.byStrat=d.stats.byStrat||{};   // {strat:{n,ok,sum}}  (sum = segundos acumulados)
+    d.stats=d.stats||{};
+    d.stats.byStrat=d.stats.byStrat||{};   // {strat:{n,ok,sum}}
     d.stats.byOp=d.stats.byOp||{};         // {op:{n,ok,sum}}
-    d.stats.history=d.stats.history||[];   // [{ts,op,st,lv,ok,t,m}] últimas ~1000 respuestas
+    d.stats.history=d.stats.history||[];   // [{ts,op,st,lv,ok,t,m}]
     d.challenge=d.challenge||{};   // {dateISO:{best,done}}
     if(!d.clientId){ d.clientId='c'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
     return d;
   }
-  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(db)); }catch(e){} }
+  function load(){
+    var d={};
+    try{ var raw=localStorage.getItem(KEY); if(raw)d=JSON.parse(raw); }catch(e){}
+    return normalize(d);
+  }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(db)); }catch(e){} cloudSaveSoon(); }
+
+  /* ---------- cuentas + nube (Supabase RPC) ---------- */
+  function sbRpc(fn, body){
+    if(!sbReady()) return Promise.reject(new Error('sin conexión configurada'));
+    return fetch(CFG.SUPABASE_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:sbHeaders(),body:JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error('HTTP '+r.status); return j; }); });
+  }
+  function cloudState(){ return {prog:db.prog, stats:db.stats, challenge:db.challenge, nick:db.profile&&db.profile.nick, section:db.profile&&db.profile.section}; }
+  function applyCloudState(st){ if(!st) return;
+    if(st.prog) db.prog=st.prog; if(st.stats) db.stats=st.stats; if(st.challenge) db.challenge=st.challenge;
+    if(st.nick) db.profile={nick:st.nick, section:st.section||(db.profile&&db.profile.section)||'A'};
+    normalize(db); }
+  function accountRegister(nick, section, pin){ return sbRpc('mm_register',{p_nick:nick,p_section:section,p_pin:pin,p_state:cloudState()}); }
+  function accountLogin(nick, pin){ return sbRpc('mm_login',{p_nick:nick,p_pin:pin}); }
+  var cloudTimer=0;
+  function cloudSaveSoon(){ if(!db.auth||!sbReady()) return; clearTimeout(cloudTimer);
+    cloudTimer=setTimeout(function(){ sbRpc('mm_save',{p_nick:db.auth.nick,p_pin:db.auth.pin,p_state:cloudState(),p_section:db.profile&&db.profile.section})
+      .catch(function(){/* reintenta en el próximo save */}); }, 2500); }
 
   /* ---------- toasts ---------- */
   function toast(ico,msg,cls){ var c=$("#toasts"); var el=document.createElement('div'); el.className='toast '+(cls||''); el.innerHTML='<span>'+ico+'</span><span>'+esc(msg)+'</span>'; c.appendChild(el);
@@ -396,6 +418,20 @@
   function paintRank(){ var f=rankFor(db.prog.xp); $("#rcIco").textContent=f.r.ico; $("#rcName").textContent=f.r.name;
     $("#rcXp").textContent = f.nx ? fmt(db.prog.xp)+' / '+fmt(f.nx.xp)+' XP' : fmt(db.prog.xp)+' XP · máx'; }
 
+  // modal de EXPERIENCIA y rangos (distinto de los niveles de dificultad de Entrenar)
+  function openRankGuide(){
+    var f=rankFor(db.prog.xp), nx=f.nx;
+    var rows=RANKS.map(function(k){ var done=db.prog.xp>=k.xp, cur=(k===f.r);
+      return '<div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--hairline);'+(cur?'font-weight:800':'')+'">'+
+        '<span style="font-size:22px;'+(done?'':'opacity:.4')+'">'+k.ico+'</span>'+
+        '<span style="flex:1;'+(done?'':'color:var(--muted)')+'">'+esc(k.name)+(cur?' · tu rango':'')+'</span>'+
+        '<span style="font-variant-numeric:tabular-nums;color:'+(done?'var(--red)':'var(--muted)')+'">'+fmt(k.xp)+' XP</span></div>'; }).join('');
+    openSheet('<div class="shead"><h2>Experiencia y rangos</h2><button class="close" data-close>✕</button></div>'+
+      '<p class="note" style="margin-top:0">Ganas <b>XP</b> al acertar (más por rapidez y por racha). Tu <b>rango</b> sube con la XP acumulada. Es distinto del <b>nivel de dificultad</b> de Entrenar.</p>'+
+      '<div class="kicker" style="color:var(--ink);margin:8px 0 4px">'+fmt(db.prog.xp)+' XP acumulada</div>'+rows+
+      '<p class="note">'+(nx?('Te faltan <b>'+fmt(nx.xp-db.prog.xp)+' XP</b> para <b>'+esc(nx.name)+'</b>.'):'Has alcanzado el rango máximo. 👑')+'</p>');
+  }
+
   /* ============================================================
      VISTAS
      ============================================================ */
@@ -403,7 +439,7 @@
   var raf=0;   // handle del temporizador
   function setView(v){ view=v; cancelAnimationFrame(raf); document.querySelectorAll("nav.tabbar .t").forEach(function(b){b.classList.toggle('on',b.dataset.view===v);}); render(); }
   function render(){
-    if(!db.profile){ return renderOnboard(); }
+    if(!db.auth || !db.profile){ return renderOnboard(); }
     paintRank();
     if(view==='train') renderTrain();
     else if(view==='challenge') renderChallenge();
@@ -481,8 +517,16 @@
       reco='<div class="reco" style="background:var(--box-gray);border-color:var(--hairline)"><b style="color:var(--ink)">Sigue practicando</b> — con unos cuantos problemas más de cada tipo te diré exactamente en qué enfocarte.</div>';
     }
 
+    var rf=rankFor(p.xp||0), rpct=rf.nx?Math.min(100,((p.xp-rf.r.xp)/(rf.nx.xp-rf.r.xp))*100):100;
     app.innerHTML=
       '<div class="sechead"><div><div class="kicker">Tu rendimiento</div><h2>Progreso</h2></div><div class="rule"></div></div>'+
+      '<div class="card" id="pRankCard" style="cursor:pointer"><div style="display:flex;align-items:center;gap:12px">'+
+        '<div style="width:44px;height:44px;border-radius:12px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:23px;flex:none">'+rf.r.ico+'</div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800">'+esc(rf.r.name)+'</div>'+
+          '<div class="note" style="margin:2px 0 0">Nivel de dificultad actual: <b>'+(p.level||1)+'</b> · racha máx '+(p.bestStreak||0)+'</div>'+
+          '<div class="lvlbar" style="margin-top:7px"><span style="width:'+rpct.toFixed(0)+'%"></span></div></div>'+
+        '<div style="text-align:right;flex:none"><div style="font-size:17px;font-weight:800;font-variant-numeric:tabular-nums">'+fmt(p.xp||0)+'</div><div class="note" style="margin:0">'+(rf.nx?'/ '+fmt(rf.nx.xp)+' XP':'XP máx')+'</div></div>'+
+      '</div></div>'+
       '<div class="hud"><div class="c"><div class="lab">Resueltos</div><div class="val">'+totalN+'</div></div><div class="c"><div class="lab">Precisión</div><div class="val">'+gAcc+'<small>%</small></div></div><div class="c"><div class="lab">Media</div><div class="val">'+gAvg.toFixed(1)+'<small>s</small></div></div></div>'+
       '<div class="card"><span class="kicker">Precisión por tipo</span><p class="note" style="margin:-4px 0 12px">La marca gris es el objetivo ('+ '85%).</p>'+accRows+'</div>'+
       '<div class="card"><span class="kicker">Tiempo medio por tipo</span><p class="note" style="margin:-4px 0 12px">Más corto es mejor. La marca gris es el tiempo objetivo.</p>'+timeRows+'</div>'+
@@ -491,6 +535,7 @@
       '<div class="card">'+reco+'</div>';
 
     $("#pReco") && ($("#pReco").onclick=function(){ setView('learn'); });
+    $("#pRankCard") && ($("#pRankCard").onclick=openRankGuide);
   }
 
   /* ---------- teclado numérico ---------- */
@@ -705,14 +750,14 @@
     document.querySelectorAll('.filterbar button').forEach(function(b){ b.onclick=function(){ rankFilter=b.dataset.f; renderRanking(); }; });
     if(!sbReady())return;
     fetchScores(id).then(function(rows){
-      // mejor marca por persona (nick+section+client)
-      var best={}; rows.forEach(function(r){ var k=r.section+'|'+r.nick+'|'+(r.client_id||''); if(!best[k]||r.score>best[k].score)best[k]=r; });
+      // mejor marca por persona (por nombre normalizado, mismo usuario en cualquier dispositivo)
+      var best={}; rows.forEach(function(r){ var k=(r.nick||'').trim().toLowerCase(); if(!best[k]||r.score>best[k].score)best[k]=r; });
       var list=Object.keys(best).map(function(k){return best[k];});
       if(rankFilter!=='global'){ var sec=rankFilter==='mine'?db.profile.section:rankFilter; list=list.filter(function(r){return r.section===sec;}); }
       list.sort(function(a,b){return b.score-a.score;});
       if(!list.length){ $("#lbCard").innerHTML='<p class="note" style="margin:0">Aún no hay marcas'+(rankFilter==='global'?'':' en esta sección')+'. ¡Sé el primero en el <b>Reto</b>!</p>'; return; }
       var mine=db.profile;
-      var body=list.slice(0,100).map(function(r,i){ var me=(r.nick===mine.nick&&r.section===mine.section&&(r.client_id||'')===db.clientId);
+      var body=list.slice(0,100).map(function(r,i){ var me=((r.nick||'').trim().toLowerCase()===(mine.nick||'').trim().toLowerCase());
         var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
         return '<tr class="'+(me?'me':'')+'"><td class="pos">'+(medal?'<span class="medal">'+medal+'</span>':(i+1))+'</td><td>'+esc(r.nick)+(rankFilter==='global'?'<span class="sec">'+esc(r.section)+'</span>':'')+'</td><td style="text-align:right;font-weight:800">'+fmt(r.score)+'</td></tr>'; }).join('');
       $("#lbCard").innerHTML='<table class="lb"><thead><tr><th>#</th><th>Estudiante</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'+body+'</tbody></table>';
@@ -767,22 +812,56 @@
     newP();
   }
 
-  /* ============ ONBOARDING ============ */
+  /* ============ ONBOARDING (crear cuenta / entrar) ============ */
   function renderOnboard(){
-    var nick="",section="";
-    app.innerHTML=
-      '<div class="sechead"><div><div class="kicker">Bienvenido/a</div><h2>Cálculo IESE</h2></div><div class="rule"></div></div>'+
-      '<div class="card"><p style="margin-top:0">Entrena cálculo mental para tus <b>case interviews</b>: niveles adaptativos, reto diario y ranking con tus compañeros de IESE.</p>'+
-        '<div class="field"><label>Tu apodo (visible en el ranking)</label><input id="obNick" maxlength="20" placeholder="p. ej. Pedro B." autocomplete="off"></div>'+
-        '<div class="field"><label>Tu sección</label><div class="secpick" id="obSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'">'+s+'</button>';}).join('')+'</div></div>'+
-        '<button class="btn red block" id="obGo" disabled>Empezar a entrenar</button>'+
-        '<p class="note">Se guarda solo en tu dispositivo. Podrás cambiarlo luego en ⚙️. Sin email ni registro.</p>'+
-      '</div>';
-    var nickEl=$("#obNick"),go=$("#obGo");
-    function check(){ nick=nickEl.value.trim(); go.disabled=!(nick.length>=2&&section); }
-    nickEl.oninput=check;
-    document.querySelectorAll('#obSec button').forEach(function(b){ b.onclick=function(){ section=b.dataset.s; document.querySelectorAll('#obSec button').forEach(function(x){x.classList.toggle('on',x===b);}); check(); }; });
-    go.onclick=function(){ db.profile={nick:nick,section:section}; save(); toast('👋','¡Hola, '+nick+'! (Sección '+section+')','red'); setView('train'); };
+    var mode='new';
+    function paint(prefill){
+      var isNew=mode==='new', section='';
+      app.innerHTML=
+        '<div class="sechead"><div><div class="kicker">Bienvenido/a</div><h2>Cálculo IESE</h2></div><div class="rule"></div></div>'+
+        '<div class="card">'+
+          '<p style="margin-top:0">Entrena cálculo mental para tus <b>case interviews</b>: niveles adaptativos, reto diario y ranking con tus compañeros. <span class="muted">Herramienta de estudio no oficial.</span></p>'+
+          '<div class="seg" id="obSeg"><button data-m="new" class="'+(isNew?'on':'')+'">Soy nuevo/a</button><button data-m="login" class="'+(!isNew?'on':'')+'">Ya tengo cuenta</button></div>'+
+          '<div class="field"><label>Nombre y apellido (o apodo)</label><input id="obNick" maxlength="24" placeholder="p. ej. Pedro Bodega" autocomplete="off"></div>'+
+          (isNew?'<div class="field"><label>Tu sección</label><div class="secpick" id="obSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'">'+s+'</button>';}).join('')+'</div></div>':'')+
+          '<div class="field"><label>PIN de 4 números'+(isNew?' (para recuperar tu cuenta en otro dispositivo)':'')+'</label><input id="obPin" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" style="letter-spacing:.45em;font-size:22px;font-weight:800;max-width:150px;text-align:center"></div>'+
+          '<div class="feedback" id="obErr" style="text-align:left;min-height:20px">&nbsp;</div>'+
+          '<button class="btn red block" id="obGo">'+(isNew?'Crear cuenta y entrar':'Entrar')+'</button>'+
+          '<p class="note">'+(isNew?'Tu nombre te identifica en el ranking. Apunta tu PIN: lo necesitas para entrar desde otro móvil.':'Entra con el mismo nombre y PIN con el que te registraste — recuperas tu progreso.')+'</p>'+
+        '</div>';
+      var nickEl=$("#obNick"), pinEl=$("#obPin"), go=$("#obGo"), err=$("#obErr");
+      if(prefill){ nickEl.value=prefill.nick||''; if(prefill.msg){ err.className='feedback bad'; err.textContent=prefill.msg; } }
+      pinEl.addEventListener('input',function(){ pinEl.value=pinEl.value.replace(/\D/g,'').slice(0,4); });
+      document.querySelectorAll('#obSeg button').forEach(function(b){ b.onclick=function(){ mode=b.dataset.m; paint(); }; });
+      if(isNew) document.querySelectorAll('#obSec button').forEach(function(b){ b.onclick=function(){ section=b.dataset.s; document.querySelectorAll('#obSec button').forEach(function(x){x.classList.toggle('on',x===b);}); }; });
+      function fail(m){ err.className='feedback bad'; err.textContent=m; go.disabled=false; go.textContent=isNew?'Crear cuenta y entrar':'Entrar'; }
+      function enter(nick,section2){ db.profile={nick:nick,section:section2}; db.auth={nick:nick,pin:pinEl.value}; save(); toast('👋','¡Hola, '+nick+'!','red'); setView('train'); }
+      go.onclick=function(){
+        var nick=nickEl.value.trim(), pin=pinEl.value;
+        if(nick.length<2) return fail('Escribe tu nombre (mínimo 2 letras).');
+        if(!/^[0-9]{4}$/.test(pin)) return fail('El PIN debe ser de 4 números.');
+        if(isNew && !section) return fail('Elige tu sección.');
+        go.disabled=true; go.textContent='Un momento…'; err.className='feedback'; err.innerHTML='&nbsp;';
+        if(!sbReady()){ return enter(nick, section||'A'); }   // sin backend: cuenta local
+        if(isNew){
+          accountRegister(nick,section,pin).then(function(res){
+            if(res.ok){ enter(nick,section); }
+            else if(res.error==='taken'){ mode='login'; paint({nick:nick, msg:'Ese nombre ya existe. Si eres tú, entra con tu PIN.'}); }
+            else if(res.error==='pin_format') fail('El PIN debe ser de 4 números.');
+            else if(res.error==='nick_short') fail('Escribe tu nombre (mínimo 2 letras).');
+            else fail('No se pudo crear la cuenta. Prueba de nuevo.');
+          }).catch(function(){ fail('Sin conexión. Inténtalo de nuevo.'); });
+        } else {
+          accountLogin(nick,pin).then(function(res){
+            if(res.ok){ applyCloudState(res.state); enter(res.nick,res.section); }
+            else if(res.error==='not_found') fail('No existe esa cuenta. Si eres nuevo/a, usa «Soy nuevo/a».');
+            else if(res.error==='bad_pin') fail('PIN incorrecto.');
+            else fail('No se pudo entrar. Inténtalo de nuevo.');
+          }).catch(function(){ fail('Sin conexión. Inténtalo de nuevo.'); });
+        }
+      };
+    }
+    paint();
   }
 
   /* ============ AJUSTES ============ */
@@ -791,17 +870,20 @@
   $("#overlay").addEventListener('click',function(e){ if(e.target===$("#overlay"))closeSheet(); });
   function openSettings(){ var pr=db.profile||{nick:"",section:""};
     openSheet('<div class="shead"><h2>Ajustes</h2><button class="close" data-close>✕</button></div>'+
-      '<div class="field"><label>Apodo</label><input id="stNick" maxlength="20" value="'+esc(pr.nick)+'"></div>'+
+      '<div class="field"><label>Cuenta</label><div style="font-size:16px;font-weight:800">'+esc(pr.nick)+'</div><div class="note" style="margin-top:2px">Tu nombre y tu PIN identifican tu cuenta en todos tus dispositivos.</div></div>'+
       '<div class="field"><label>Sección</label><div class="secpick" id="stSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'" class="'+(pr.section===s?'on':'')+'">'+s+'</button>';}).join('')+'</div></div>'+
-      '<button class="btn red block" id="stSave">Guardar</button>'+
-      '<div style="height:14px"></div>'+
-      '<button class="btn ghost block" id="stReset">Reiniciar mi progreso (nivel, XP, logros)</button>'+
+      '<button class="btn red block" id="stSave">Guardar sección</button>'+
+      '<div style="height:12px"></div>'+
+      '<button class="btn ghost block" id="stLogout">Cerrar sesión</button>'+
+      '<div style="height:8px"></div>'+
+      '<button class="btn ghost block" id="stReset" style="color:var(--red)">Reiniciar mi progreso (nivel, XP, logros)</button>'+
       '<p class="note">Instala la app: en iPhone, Compartir → “Añadir a pantalla de inicio”. En Android, menú → “Instalar app”.</p>'+
       '<p class="note">Versión 1.0 · IESE Calculation Prep · Estrategias basadas en “Consulting & DI Fundamentals: Mental Math”.</p>');
     var sec=pr.section;
     $("#sheet").querySelectorAll('#stSec button').forEach(function(b){ b.onclick=function(){ sec=b.dataset.s; $("#sheet").querySelectorAll('#stSec button').forEach(function(x){x.classList.toggle('on',x===b);}); }; });
-    $("#stSave").onclick=function(){ var nk=$("#stNick").value.trim(); if(nk.length<2){ $("#stNick").focus(); return; } db.profile={nick:nk,section:sec||pr.section||SECTIONS[0]}; save(); closeSheet(); toast('✅','Perfil actualizado',''); render(); };
-    $("#stReset").onclick=function(){ if(!confirm('¿Reiniciar TODO tu progreso (nivel, XP, logros)? Tu perfil y récords de reto se mantienen.'))return; db.prog={}; db=load(); save(); closeSheet(); toast('🔄','Progreso reiniciado',''); setView('train'); };
+    $("#stSave").onclick=function(){ db.profile.section=sec||pr.section||SECTIONS[0]; save(); closeSheet(); toast('✅','Sección guardada',''); render(); };
+    $("#stLogout").onclick=function(){ if(!confirm('¿Cerrar sesión en este dispositivo? Podrás volver a entrar con tu nombre y PIN.'))return; db.auth=null; db.profile=null; save(); closeSheet(); toast('👋','Sesión cerrada',''); setView('train'); };
+    $("#stReset").onclick=function(){ if(!confirm('¿Reiniciar TODO tu progreso (nivel, XP, logros, estadísticas)? Esto no se puede deshacer.'))return; db.prog={}; db.stats={}; db.challenge={}; normalize(db); save(); closeSheet(); toast('🔄','Progreso reiniciado',''); setView('train'); };
   }
 
   /* ============ NAV + arranque ============ */
@@ -809,7 +891,7 @@
   document.addEventListener('keydown',function(e){ if(keydownHandler)keydownHandler(e); });
   document.querySelectorAll("nav.tabbar .t").forEach(function(b){ b.onclick=function(){ keydownHandler=null; setView(b.dataset.view); }; });
   $("#gear").onclick=openSettings;
-  $("#rankChip").onclick=function(){ if(view==='train')openGuide(); else setView('train'); };
+  $("#rankChip").onclick=openRankGuide;
 
   // service worker (solo hospedada)
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
