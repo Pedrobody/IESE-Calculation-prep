@@ -47,7 +47,7 @@
   .gear{border:1px solid var(--hairline);background:var(--paper);width:36px;height:36px;border-radius:9px;font-size:17px;cursor:pointer;color:var(--ink);flex:none}
   .gear:active{background:var(--box-gray)}
 
-  main{flex:1;max-width:680px;width:100%;margin:0 auto;padding:16px 16px calc(var(--navh) + 96px + env(safe-area-inset-bottom));min-height:0}
+  main{flex:1;max-width:680px;width:100%;margin:0 auto;padding:16px 16px calc(var(--navh) + 130px + env(safe-area-inset-bottom));min-height:0}
 
   /* Bottom nav */
   nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:1px solid var(--hairline);
@@ -143,6 +143,14 @@
   .filterbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
   .filterbar button{border:1px solid var(--hairline);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer}
   .filterbar button.on{background:var(--red);color:#fff;border-color:var(--red)}
+  /* challenge hero */
+  .chero{background:linear-gradient(160deg,#fff 0%,var(--box-red) 100%);border:1px solid #f4d3d6;border-top:4px solid var(--red);border-radius:16px;padding:22px 18px 20px;text-align:center;box-shadow:var(--shadow);margin-bottom:14px}
+  .chero-badge{width:60px;height:60px;border-radius:16px;background:var(--red);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:0 6px 16px rgba(227,6,19,.28)}
+  .chero-kick{font-size:22px;font-weight:800;letter-spacing:.01em}
+  .chero-date{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-top:3px}
+  .chero-best{font-size:13px;color:var(--graphite);margin-top:10px}
+  .chero-best b{color:var(--red);font-size:15px}
+  .chero-how{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.45}
 
   /* strategies */
   .strat{border:1px solid var(--hairline);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;background:var(--paper)}
@@ -253,7 +261,6 @@
   <button class="t on" data-view="train"><span class="i">🏆</span>Train</button>
   <button class="t" data-view="challenge"><span class="i">🎯</span>Challenge</button>
   <button class="t" data-view="progress"><span class="i">📈</span>Progress</button>
-  <button class="t" data-view="ranking"><span class="i">🏅</span>Ranking</button>
   <button class="t" data-view="learn"><span class="i">📚</span>Learn</button>
 </nav>
 
@@ -461,13 +468,15 @@
   function setView(v){ view=v; cancelAnimationFrame(raf); document.querySelectorAll("nav.tabbar .t").forEach(function(b){b.classList.toggle('on',b.dataset.view===v);}); render(); }
   function render(){
     if(!db.auth || !db.profile){ return renderOnboard(); }
-    paintRank();
+    paintRank(); ensureAdminTab();
+    if(view==='admin' && !isAdmin()) view='train';
     if(view==='train') renderTrain();
-    else if(view==='challenge') renderChallenge();
+    else if(view==='challenge'||view==='ranking') renderChallenge();
     else if(view==='progress') renderProgress();
-    else if(view==='ranking') renderRanking();
     else if(view==='learn') renderLearn();
+    else if(view==='admin') renderAdmin();
   }
+  function isAdmin(){ return !!(db.profile && (db.profile.nick||'').trim().toLowerCase()==='pedro bodega'); }
 
   /* ============ PROGRESO (estadísticas + gráficas) ============ */
   var OPS=[['mult','Multiplication','×'],['div','Division','÷'],['pct','Percentages','%']];
@@ -700,14 +709,56 @@
   function renderChallenge(){
     var id=todayISO(); var rec=db.challenge[id]||{};
     app.innerHTML=
-      '<div class="sechead"><div><div class="kicker">Competition</div><h2>Daily Challenge</h2></div><div class="rule"></div></div>'+
-      '<div class="card"><p style="margin:0 0 4px">Today, <b>'+id+'</b>. The <b>15 problems are the same for everyone</b>: increasing difficulty, timed. Your score depends on accuracy and speed. Submit your result to the leaderboard and compete with your section.</p>'+
-        (rec.best?'<p class="note">Your best today: <b style="color:var(--red)">'+fmt(rec.best)+' pts</b>.</p>':'')+
-        '<div class="row" style="margin-top:12px"><button class="btn red block" id="cStart">▶ '+(rec.done?'Replay the challenge':'Start the challenge')+'</button></div>'+
-        (sbReady()?'':'<p class="note">⚠️ The online leaderboard isn\'t set up yet (missing the Supabase key in config.js). You can still play and see your score locally.</p>')+
+      '<div class="chero">'+
+        '<div class="chero-badge">🎯</div>'+
+        '<div class="chero-kick">Daily Challenge</div>'+
+        '<div class="chero-date">'+id+'</div>'+
+        (rec.best?'<div class="chero-best">Your best today · <b>'+fmt(rec.best)+' pts</b></div>':'<div class="chero-best">15 problems · same for everyone · timed</div>')+
+        '<button class="btn red block" id="cStart" style="margin-top:14px">▶ '+(rec.done?'Replay the challenge':'Start the challenge')+'</button>'+
+        '<div class="chero-how">15 problems of increasing difficulty. Faster + more accurate = more points. Submit your score and compete with your section.</div>'+
       '</div>'+
-      '<div class="card"><span class="kicker">How scoring works</span><p style="margin:0" class="note">Each problem is worth more the harder it is (level 2 → 10). Answer fast = full points; answer slow = fewer; miss it or run out of time = 0. Max points per problem if you beat the target time.</p></div>';
+      (sbReady()?'':'<div class="card"><p class="note" style="margin:0">⚠️ The online leaderboard isn\'t set up yet (missing the Supabase key in config.js). You can still play and see your score locally.</p></div>')+
+      '<div id="lbWrap"></div>';
     $("#cStart").onclick=function(){ runChallenge(id); };
+    renderLeaderboardBlock($("#lbWrap"), id);
+  }
+
+  function renderLeaderboardBlock(wrap, id){
+    if(!wrap) return;
+    var secBtns=['global'].concat(SECTIONS).map(function(s){ var lab=s==='global'?'🌍 Global':'Section '+s; return '<button class="'+(rankFilter===s?'on':'')+'" data-f="'+s+'">'+lab+'</button>'; }).join('');
+    wrap.innerHTML=
+      '<div class="sechead" style="margin-top:22px"><div><div class="kicker">Leaderboard</div><h2 style="font-size:20px">Today\'s ranking</h2></div><div class="rule"></div></div>'+
+      '<div class="filterbar">'+secBtns+'</div>'+
+      (rankFilter==='global'?'<div class="card" id="secCard"><span class="kicker">Section vs section</span><p class="note" style="margin:0">Loading…</p></div>':'')+
+      '<div class="card" id="lbCard"><p class="note" style="margin:0">'+(sbReady()?'Loading ranking…':'No online data.')+'</p></div>';
+    wrap.querySelectorAll('.filterbar button').forEach(function(b){ b.onclick=function(){ rankFilter=b.dataset.f; renderLeaderboardBlock(wrap, id); }; });
+    if(!sbReady())return;
+    fetchScores(id).then(function(rows){
+      var best={}; rows.forEach(function(r){ var k=(r.nick||'').trim().toLowerCase(); if(!best[k]||r.score>best[k].score)best[k]=r; });
+      var all=Object.keys(best).map(function(k){return best[k];});
+      var mine=db.profile;
+      var secCard=wrap.querySelector('#secCard');
+      if(secCard){
+        var agg={}; all.forEach(function(r){ var s=(r.section||'?'); (agg[s]=agg[s]||{n:0,total:0}); agg[s].n++; agg[s].total+=r.score; });
+        var secList=Object.keys(agg).map(function(s){ return {sec:s,n:agg[s].n,total:agg[s].total,avg:Math.round(agg[s].total/agg[s].n)}; }).sort(function(a,b){return b.total-a.total;});
+        if(!secList.length){ secCard.innerHTML='<span class="kicker">Section vs section</span><p class="note" style="margin:6px 0 0">No results yet today.</p>'; }
+        else{
+          var secRows=secList.map(function(r,i){ var me=r.sec===mine.section; var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+            return '<tr class="'+(me?'me':'')+'"><td class="pos">'+medal+'</td><td>Section '+esc(r.sec)+'</td><td style="text-align:right">'+r.n+'</td><td style="text-align:right;color:var(--muted)">'+fmt(r.avg)+'</td><td style="text-align:right;font-weight:800">'+fmt(r.total)+'</td></tr>'; }).join('');
+          secCard.innerHTML='<span class="kicker">Section vs section</span><p class="note" style="margin:-4px 0 10px">Total points from today\'s challenge (sum of each student\'s best result). May the best section win!</p>'+
+            '<table class="lb"><thead><tr><th>#</th><th>Section</th><th style="text-align:right">Students</th><th style="text-align:right">Avg</th><th style="text-align:right">Total</th></tr></thead><tbody>'+secRows+'</tbody></table>';
+        }
+      }
+      var list=all.slice();
+      if(rankFilter!=='global'){ list=list.filter(function(r){return r.section===rankFilter;}); }
+      list.sort(function(a,b){return b.score-a.score;});
+      var lb=wrap.querySelector('#lbCard');
+      if(!list.length){ lb.innerHTML='<p class="note" style="margin:0">No results yet'+(rankFilter==='global'?'':' in this section')+'. Be the first in the <b>Challenge</b>!</p>'; return; }
+      var body=list.slice(0,150).map(function(r,i){ var me=((r.nick||'').trim().toLowerCase()===(mine.nick||'').trim().toLowerCase());
+        var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+        return '<tr class="'+(me?'me':'')+'"><td class="pos">'+(medal?'<span class="medal">'+medal+'</span>':(i+1))+'</td><td>'+esc(r.nick)+(rankFilter==='global'?'<span class="sec">'+esc(r.section)+'</span>':'')+'</td><td style="text-align:right;font-weight:800">'+fmt(r.score)+'</td></tr>'; }).join('');
+      lb.innerHTML='<div class="kicker" style="display:block;margin-bottom:8px">'+(rankFilter==='global'?'Individual ranking':'Section '+esc(rankFilter))+'</div><table class="lb"><thead><tr><th>#</th><th>Student</th><th style="text-align:right">Points</th></tr></thead><tbody>'+body+'</tbody></table>';
+    }).catch(function(err){ var lb=wrap.querySelector('#lbCard'); if(lb)lb.innerHTML='<p class="note" style="margin:0">⚠️ Could not load the ranking: '+esc(err.message||'error')+'</p>'; });
   }
 
   function runChallenge(id){
@@ -750,7 +801,7 @@
           (sbReady()?'<div id="cSubMsg" class="note"></div>':'<p class="note">Set up Supabase (config.js) to compete on the online leaderboard.</p>')+
         '</div>';
       $("#cAgain")&&($("#cAgain").onclick=function(){ runChallenge(id); });
-      $("#cToRank")&&($("#cToRank").onclick=function(){ setView('ranking'); });
+      $("#cToRank")&&($("#cToRank").onclick=function(){ setView('challenge'); });
       $("#cSubmit")&&($("#cSubmit").onclick=function(){ var btn=this; btn.disabled=true; btn.textContent='Submitting…';
         submitScore(id,score,correct,15,totalTime).then(function(){ $("#cSubMsg").innerHTML='✅ Submitted. Check the ranking!'; toast('🏅','Result submitted to the leaderboard','red'); })
         .catch(function(err){ btn.disabled=false; btn.textContent='📊 Submit to leaderboard'; $("#cSubMsg").innerHTML='⚠️ Could not submit: '+esc(err.message||'network error'); }); });
@@ -773,48 +824,6 @@
     return fetch(url,{headers:sbHeaders()}).then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); });
   }
   var rankFilter="global";
-  function renderRanking(){
-    var id=todayISO();
-    var secBtns=['global'].concat(SECTIONS).map(function(s){ var lab=s==='global'?'🌍 Global':'Section '+s; return '<button class="'+(rankFilter===s?'on':'')+'" data-f="'+s+'">'+lab+'</button>'; }).join('');
-    app.innerHTML=
-      '<div class="sechead"><div><div class="kicker">Leaderboard</div><h2>Ranking · Today\'s challenge</h2></div><div class="rule"></div></div>'+
-      (sbReady()?'':'<div class="card"><b>Online leaderboard not set up.</b><p class="note" style="margin-bottom:0">Paste the Supabase public key into <code>config.js</code>.</p></div>')+
-      '<div class="filterbar">'+secBtns+'</div>'+
-      (rankFilter==='global'?'<div class="card" id="secCard"><span class="kicker">Section vs section</span><p class="note" style="margin:0">Loading…</p></div>':'')+
-      '<div class="card" id="lbCard"><p class="note" style="margin:0">'+(sbReady()?'Loading ranking…':'No online data.')+'</p></div>';
-    document.querySelectorAll('.filterbar button').forEach(function(b){ b.onclick=function(){ rankFilter=b.dataset.f; renderRanking(); }; });
-    if(!sbReady())return;
-    fetchScores(id).then(function(rows){
-      // mejor marca por persona (por nombre normalizado; mismo usuario en cualquier dispositivo)
-      var best={}; rows.forEach(function(r){ var k=(r.nick||'').trim().toLowerCase(); if(!best[k]||r.score>best[k].score)best[k]=r; });
-      var all=Object.keys(best).map(function(k){return best[k];});
-      var mine=db.profile;
-
-      // --- competición por secciones (siempre desde el total, en la vista global) ---
-      var secCard=$("#secCard");
-      if(secCard){
-        var agg={}; all.forEach(function(r){ var s=(r.section||'?'); (agg[s]=agg[s]||{n:0,total:0}); agg[s].n++; agg[s].total+=r.score; });
-        var secList=Object.keys(agg).map(function(s){ return {sec:s,n:agg[s].n,total:agg[s].total,avg:Math.round(agg[s].total/agg[s].n)}; }).sort(function(a,b){return b.total-a.total;});
-        if(!secList.length){ secCard.innerHTML='<span class="kicker">Section vs section</span><p class="note" style="margin:6px 0 0">No results yet today.</p>'; }
-        else{
-          var secRows=secList.map(function(r,i){ var me=r.sec===mine.section; var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-            return '<tr class="'+(me?'me':'')+'"><td class="pos">'+medal+'</td><td>Section '+esc(r.sec)+'</td><td style="text-align:right">'+r.n+'</td><td style="text-align:right;color:var(--muted)">'+fmt(r.avg)+'</td><td style="text-align:right;font-weight:800">'+fmt(r.total)+'</td></tr>'; }).join('');
-          secCard.innerHTML='<span class="kicker">Section vs section</span><p class="note" style="margin:-4px 0 10px">Total points from today\'s challenge (sum of each student\'s best result). May the best section win!</p>'+
-            '<table class="lb"><thead><tr><th>#</th><th>Section</th><th style="text-align:right">Students</th><th style="text-align:right">Avg</th><th style="text-align:right">Total</th></tr></thead><tbody>'+secRows+'</tbody></table>';
-        }
-      }
-
-      // --- ranking individual (filtrado) ---
-      var list=all.slice();
-      if(rankFilter!=='global'){ list=list.filter(function(r){return r.section===rankFilter;}); }
-      list.sort(function(a,b){return b.score-a.score;});
-      if(!list.length){ $("#lbCard").innerHTML='<p class="note" style="margin:0">No results yet'+(rankFilter==='global'?'':' in this section')+'. Be the first in the <b>Challenge</b>!</p>'; return; }
-      var body=list.slice(0,150).map(function(r,i){ var me=((r.nick||'').trim().toLowerCase()===(mine.nick||'').trim().toLowerCase());
-        var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-        return '<tr class="'+(me?'me':'')+'"><td class="pos">'+(medal?'<span class="medal">'+medal+'</span>':(i+1))+'</td><td>'+esc(r.nick)+(rankFilter==='global'?'<span class="sec">'+esc(r.section)+'</span>':'')+'</td><td style="text-align:right;font-weight:800">'+fmt(r.score)+'</td></tr>'; }).join('');
-      $("#lbCard").innerHTML='<div class="kicker" style="display:block;margin-bottom:8px">'+(rankFilter==='global'?'Individual ranking':'Section '+esc(rankFilter))+'</div><table class="lb"><thead><tr><th>#</th><th>Student</th><th style="text-align:right">Points</th></tr></thead><tbody>'+body+'</tbody></table>';
-    }).catch(function(err){ $("#lbCard").innerHTML='<p class="note" style="margin:0">⚠️ Could not load the ranking: '+esc(err.message||'error')+'</p>'; });
-  }
 
   /* ============ LEARN (MBB strategies) ============ */
   function explainSteps(p){ var F=fmt; switch(p.strat){
@@ -1006,6 +1015,43 @@
     $("#stSave").onclick=function(){ db.profile.section=sec||pr.section||SECTIONS[0]; save(); closeSheet(); toast('✅','Section saved',''); render(); };
     $("#stLogout").onclick=function(){ if(!confirm('Sign out on this device? You can sign back in with your name and PIN.'))return; db.auth=null; db.profile=null; save(); closeSheet(); toast('👋','Signed out',''); setView('train'); };
     $("#stReset").onclick=function(){ if(!confirm('Reset ALL your progress (level, XP, achievements, stats)? This cannot be undone.'))return; db.prog={}; db.stats={}; db.challenge={}; normalize(db); save(); closeSheet(); toast('🔄','Progress reset',''); setView('train'); };
+  }
+
+  /* ============ ADMIN (solo Pedro Bodega): estadísticas de uso ============ */
+  function ensureAdminTab(){
+    var bar=document.getElementById('tabbar'); if(!bar) return;
+    var has=bar.querySelector('[data-view="admin"]');
+    if(isAdmin()){ if(!has){ var b=document.createElement('button'); b.className='t'; b.setAttribute('data-view','admin'); b.innerHTML='<span class="i">📊</span>Admin'; b.onclick=function(){ keydownHandler=null; setView('admin'); }; bar.appendChild(b); } }
+    else if(has){ has.remove(); }
+  }
+  function fetchAllScores(){ if(!sbReady())return Promise.reject(new Error('Supabase not configured'));
+    return fetch(CFG.SUPABASE_URL+'/rest/v1/scores?select=nick,section,score,challenge_id,created_at&order=created_at.desc&limit=5000',{headers:sbHeaders()}).then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); }); }
+  function barRows(items, labelFn, valFn){ var max=1; items.forEach(function(x){ var v=valFn(x); if(v>max)max=v; });
+    return items.map(function(x){ var v=valFn(x), w=Math.round(v/max*100); return '<div class="pbar-row"><div class="pl">'+labelFn(x)+'</div><div class="pbar-track"><div class="pbar-fill" style="width:'+w+'%"></div></div><div class="pbar-val"><b>'+v+'</b></div></div>'; }).join(''); }
+  function renderAdmin(){
+    keydownHandler=null;
+    app.innerHTML='<div class="sechead"><div><div class="kicker">Admin · usage</div><h2>Stats</h2></div><div class="rule"></div></div>'+
+      '<div class="card" id="adBody"><p class="note" style="margin:0">Loading usage data…</p></div>';
+    if(!sbReady()){ $("#adBody").innerHTML='<p class="note" style="margin:0">Supabase not configured.</p>'; return; }
+    fetchAllScores().then(function(rows){
+      var today=todayISO(), players={}, sections={}, byDay={}, plays=rows.length, todayPlays=0, scoreSum=0;
+      rows.forEach(function(r){ var k=(r.nick||'').trim().toLowerCase();
+        if(!players[k]) players[k]={nick:r.nick,section:r.section,best:0};
+        if(r.score>players[k].best){ players[k].best=r.score; players[k].section=r.section; }
+        var sec=r.section||'?'; (sections[sec]=sections[sec]||{})[k]=1;
+        var d=r.challenge_id||String(r.created_at||'').slice(0,10); byDay[d]=(byDay[d]||0)+1; if(d===today)todayPlays++;
+        scoreSum+=r.score; });
+      var uniq=Object.keys(players).length, avg=plays?Math.round(scoreSum/plays):0;
+      var secList=Object.keys(sections).map(function(s){return {s:s,n:Object.keys(sections[s]).length};}).sort(function(a,b){return b.n-a.n;});
+      var days=Object.keys(byDay).sort().slice(-12);
+      var top=Object.keys(players).map(function(k){return players[k];}).sort(function(a,b){return b.best-a.best;}).slice(0,12);
+      var topRows=top.map(function(p,i){return '<tr><td class="pos">'+(i+1)+'</td><td>'+esc(p.nick)+'<span class="sec">'+esc(p.section)+'</span></td><td style="text-align:right;font-weight:800">'+fmt(p.best)+'</td></tr>';}).join('');
+      app.innerHTML='<div class="sechead"><div><div class="kicker">Admin · usage</div><h2>Stats</h2></div><div class="rule"></div></div>'+
+        '<div class="hud"><div class="c"><div class="lab">Players</div><div class="val">'+uniq+'</div></div><div class="c"><div class="lab">Plays</div><div class="val">'+plays+'</div></div><div class="c"><div class="lab">Today</div><div class="val">'+todayPlays+'</div></div></div>'+
+        '<div class="card"><span class="kicker">Players by section</span>'+(secList.length?barRows(secList,function(x){return 'Section '+esc(x.s);},function(x){return x.n;}):'<p class="note" style="margin:6px 0 0">No data.</p>')+'</div>'+
+        '<div class="card"><span class="kicker">Plays per day</span>'+(days.length?barRows(days,function(d){var dd=d.split("-");return '<span style="font-size:11px">'+(dd[2]+"/"+dd[1])+'</span>';},function(d){return byDay[d];}):'<p class="note" style="margin:6px 0 0">No data.</p>')+'</div>'+
+        '<div class="card"><span class="kicker">Top players (best challenge score)</span>'+(topRows?'<table class="lb"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Best</th></tr></thead><tbody>'+topRows+'</tbody></table>':'<p class="note" style="margin:6px 0 0">No data.</p>')+'<p class="note">Average score across all plays: <b>'+fmt(avg)+'</b>. Data reflects Daily Challenge submissions.</p></div>';
+    }).catch(function(err){ var b=$("#adBody"); if(b)b.innerHTML='<p class="note" style="margin:0">⚠️ '+esc(err.message||'error')+'</p>'; });
   }
 
   /* ============ NAV + arranque ============ */
