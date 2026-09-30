@@ -186,6 +186,30 @@
   .pop{animation:pop .3s ease}
   .note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
   a{color:var(--red)}
+
+  /* ===== Progreso (estadísticas) ===== */
+  .pbar-row{display:grid;grid-template-columns:92px 1fr 96px;align-items:center;gap:10px;margin-bottom:11px;font-size:13px}
+  .pbar-row .pl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+  .pbar-track{position:relative;background:var(--box-gray);border:1px solid var(--hairline);border-radius:99px;height:14px;overflow:hidden}
+  .pbar-fill{height:100%;background:var(--red);border-radius:99px;transition:width .4s}
+  .pbar-fill.dim{background:#c9c9c9}
+  .pbar-tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--graphite);opacity:.55}
+  .pbar-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .pbar-val b{color:var(--ink)}
+  .ptable{width:100%;border-collapse:collapse;font-size:13px}
+  .ptable th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800;text-align:right;padding:5px 6px;border-bottom:1px solid var(--hairline)}
+  .ptable th:first-child{text-align:left}
+  .ptable td{padding:8px 6px;border-bottom:1px solid var(--hairline);text-align:right;font-variant-numeric:tabular-nums}
+  .ptable td:first-child{text-align:left;font-weight:700}
+  .ptable .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
+  .ptable .dot.weak{background:var(--red)} .ptable .dot.ok{background:#bdbdbd}
+  .spark{width:100%;height:130px;display:block;overflow:visible}
+  .spark text{font-size:9px;fill:var(--muted);font-family:var(--font)}
+  .reco{background:var(--box-red);border:1px solid #f6d5d7;border-radius:var(--radius);padding:14px 16px}
+  .reco b{color:var(--red)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:16px;height:4px;border-radius:2px;display:inline-block}
 </style>
 </head>
 <body>
@@ -207,7 +231,8 @@
 <nav class="tabbar" id="tabbar">
   <button class="t on" data-view="train"><span class="i">🏆</span>Entrenar</button>
   <button class="t" data-view="challenge"><span class="i">🎯</span>Reto</button>
-  <button class="t" data-view="ranking"><span class="i">📊</span>Ranking</button>
+  <button class="t" data-view="progress"><span class="i">📈</span>Progreso</button>
+  <button class="t" data-view="ranking"><span class="i">🏅</span>Ranking</button>
   <button class="t" data-view="learn"><span class="i">📚</span>Aprender</button>
 </nav>
 
@@ -382,8 +407,90 @@
     paintRank();
     if(view==='train') renderTrain();
     else if(view==='challenge') renderChallenge();
+    else if(view==='progress') renderProgress();
     else if(view==='ranking') renderRanking();
     else if(view==='learn') renderLearn();
+  }
+
+  /* ============ PROGRESO (estadísticas + gráficas) ============ */
+  var OPS=[['mult','Multiplicación','×'],['div','División','÷'],['pct','Porcentajes','%']];
+  var OBJ={mult:{t:6,acc:85}, div:{t:7,acc:85}, pct:{t:8,acc:85}};   // objetivos de referencia
+  var STRAT_NAME={'mult-zeros':'× Ceros','mult-comp':'× Componentes','mult-complex':'× Comp. complejos','mult-square':'× Cuadrados','div-zeros':'÷ Ceros','div-break':'÷ Partir y sumar','div-factor':'÷ Factorizar','pct-comp':'% Componentes','pct-estimate':'% Estimar'};
+  var STRAT_OP={'mult-zeros':'mult','mult-comp':'mult','mult-complex':'mult','mult-square':'mult','div-zeros':'div','div-break':'div','div-factor':'div','pct-comp':'pct','pct-estimate':'pct'};
+
+  function acc(e){ return e&&e.n?e.ok/e.n:0; }
+  function avgT(e){ return e&&e.n?e.sum/e.n:0; }
+
+  // línea de tendencia (SVG) a partir de puntos {label, v(0..1)}
+  function sparkline(pts, valFmt){
+    if(pts.length<2) return '<p class="note">Necesitas practicar en al menos 2 días distintos para ver la tendencia.</p>';
+    var W=320,H=130,padL=6,padR=6,padT=12,padB=22, iw=W-padL-padR, ih=H-padT-padB;
+    var n=pts.length, x=function(i){ return padL+(n===1?iw/2:iw*i/(n-1)); }, y=function(v){ return padT+ih*(1-v); };
+    var line=pts.map(function(p,i){ return (i?'L':'M')+x(i).toFixed(1)+' '+y(p.v).toFixed(1); }).join(' ');
+    var dots=pts.map(function(p,i){ return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="3" fill="var(--red)"/>'; }).join('');
+    var labs=pts.map(function(p,i){ if(n>7 && i%2) return ''; return '<text x="'+x(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(p.label)+'</text>'; }).join('');
+    var vlabs=pts.map(function(p,i){ return '<text x="'+x(i).toFixed(1)+'" y="'+(y(p.v)-7).toFixed(1)+'" text-anchor="middle" fill="var(--ink)" style="font-weight:700">'+valFmt(p)+'</text>'; }).join('');
+    return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img">'+
+      '<line x1="'+padL+'" y1="'+y(0)+'" x2="'+(W-padR)+'" y2="'+y(0)+'" stroke="var(--hairline)"/>'+
+      '<path d="'+line+'" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labs+vlabs+'</svg>';
+  }
+
+  function renderProgress(){
+    var s=db.stats, p=db.prog, h=s.history||[];
+    var totalN=OPS.reduce(function(a,o){ return a+((s.byOp[o[0]]||{}).n||0); },0);
+    if(!totalN){
+      app.innerHTML='<div class="sechead"><div><div class="kicker">Tu rendimiento</div><h2>Progreso</h2></div><div class="rule"></div></div>'+
+        '<div class="card"><div class="empty" style="border:none;padding:30px 10px"><div class="big" style="font-weight:800;font-size:15px;margin-bottom:6px">Aún no hay datos</div><div class="muted">Entrena o juega un Reto y aquí verás tu precisión, tus tiempos por tipo, tu evolución y en qué mejorar.</div><div style="margin-top:16px"><button class="btn red" id="pGo">Ir a entrenar</button></div></div></div>';
+      $("#pGo").onclick=function(){ setView('train'); };
+      return;
+    }
+    var totOk=OPS.reduce(function(a,o){ return a+((s.byOp[o[0]]||{}).ok||0); },0);
+    var totSum=OPS.reduce(function(a,o){ return a+((s.byOp[o[0]]||{}).sum||0); },0);
+    var gAcc=Math.round(totOk/totalN*100), gAvg=(totSum/totalN);
+
+    // --- precisión por tipo ---
+    var accRows=OPS.map(function(o){ var e=s.byOp[o[0]]; if(!e||!e.n) return ''; var a=Math.round(acc(e)*100), tgt=OBJ[o[0]].acc;
+      return '<div class="pbar-row"><div class="pl">'+o[2]+' '+esc(o[1])+'</div><div class="pbar-track"><div class="pbar-fill'+(a<tgt?' ':'')+'" style="width:'+a+'%"></div><div class="pbar-tick" style="left:'+tgt+'%"></div></div><div class="pbar-val"><b>'+a+'%</b> · '+e.n+'</div></div>'; }).join('');
+    // --- tiempo medio por tipo (barra escala 0..15s, marca objetivo) ---
+    var TMAX=15;
+    var timeRows=OPS.map(function(o){ var e=s.byOp[o[0]]; if(!e||!e.n) return ''; var t=avgT(e), tgt=OBJ[o[0]].t, w=Math.min(100,t/TMAX*100), good=t<=tgt;
+      return '<div class="pbar-row"><div class="pl">'+o[2]+' '+esc(o[1])+'</div><div class="pbar-track"><div class="pbar-fill'+(good?' dim':'')+'" style="width:'+w.toFixed(0)+'%"></div><div class="pbar-tick" style="left:'+(tgt/TMAX*100).toFixed(0)+'%"></div></div><div class="pbar-val"><b>'+t.toFixed(1)+'s</b> · obj '+tgt+'s</div></div>'; }).join('');
+
+    // --- tendencia por día (precisión) ---
+    var byDay={}; h.forEach(function(a){ var d=new Date(a.ts); var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); (byDay[k]=byDay[k]||{n:0,ok:0,sum:0}); byDay[k].n++; if(a.ok)byDay[k].ok++; byDay[k].sum+=a.t; });
+    var days=Object.keys(byDay).sort().slice(-10);
+    var trendPts=days.map(function(k){ var e=byDay[k]; var dd=k.split('-'); return {label:dd[2]+'/'+dd[1], v:e.ok/e.n}; });
+
+    // --- por estrategia ---
+    var stratKeys=Object.keys(s.byStrat).filter(function(k){ return s.byStrat[k].n>=3; })
+      .sort(function(a,b){ return acc(s.byStrat[a])-acc(s.byStrat[b]); });
+    var stratRows=stratKeys.map(function(k){ var e=s.byStrat[k], a=Math.round(acc(e)*100), t=avgT(e), weak=a<75;
+      return '<tr><td><span class="dot '+(weak?'weak':'ok')+'"></span>'+esc(STRAT_NAME[k]||k)+'</td><td>'+e.n+'</td><td>'+a+'%</td><td>'+t.toFixed(1)+'s</td></tr>'; }).join('');
+
+    // --- recomendación: tipo/estrategia más flojo con datos suficientes ---
+    var reco='';
+    var cand=OPS.map(function(o){return {key:o[0],name:o[1],e:s.byOp[o[0]]};}).filter(function(c){return c.e&&c.e.n>=8;});
+    if(cand.length){ cand.sort(function(a,b){ return (acc(a.e)-OBJ[a.key].acc/100) - (acc(b.e)-OBJ[b.key].acc/100); });
+      var w=cand[0]; var wa=Math.round(acc(w.e)*100), wt=avgT(w.e).toFixed(1);
+      // estrategia más floja dentro de ese tipo
+      var ws=stratKeys.filter(function(k){return STRAT_OP[k]===w.key;})[0];
+      reco='<div class="reco"><b>Tu punto más flojo: '+esc(w.name)+'</b> — '+wa+'% de aciertos, '+wt+'s de media (objetivo '+OBJ[w.key].acc+'% y '+OBJ[w.key].t+'s).'+
+        (ws?' Sobre todo en <b>'+esc(STRAT_NAME[ws])+'</b>.':'')+
+        '<div style="margin-top:10px"><button class="btn red" id="pReco">Repasar esta técnica en Aprender</button></div></div>';
+    } else {
+      reco='<div class="reco" style="background:var(--box-gray);border-color:var(--hairline)"><b style="color:var(--ink)">Sigue practicando</b> — con unos cuantos problemas más de cada tipo te diré exactamente en qué enfocarte.</div>';
+    }
+
+    app.innerHTML=
+      '<div class="sechead"><div><div class="kicker">Tu rendimiento</div><h2>Progreso</h2></div><div class="rule"></div></div>'+
+      '<div class="hud"><div class="c"><div class="lab">Resueltos</div><div class="val">'+totalN+'</div></div><div class="c"><div class="lab">Precisión</div><div class="val">'+gAcc+'<small>%</small></div></div><div class="c"><div class="lab">Media</div><div class="val">'+gAvg.toFixed(1)+'<small>s</small></div></div></div>'+
+      '<div class="card"><span class="kicker">Precisión por tipo</span><p class="note" style="margin:-4px 0 12px">La marca gris es el objetivo ('+ '85%).</p>'+accRows+'</div>'+
+      '<div class="card"><span class="kicker">Tiempo medio por tipo</span><p class="note" style="margin:-4px 0 12px">Más corto es mejor. La marca gris es el tiempo objetivo.</p>'+timeRows+'</div>'+
+      '<div class="card"><span class="kicker">Evolución (precisión por día)</span>'+sparkline(trendPts,function(p){return Math.round(p.v*100)+'%';})+'</div>'+
+      (stratRows?'<div class="card"><span class="kicker">Por técnica</span><p class="note" style="margin:-4px 0 10px">Ordenado de más flojo a mejor. Punto rojo = por debajo del 75%.</p><table class="ptable"><thead><tr><th>Técnica</th><th>N</th><th>Aciertos</th><th>Media</th></tr></thead><tbody>'+stratRows+'</tbody></table></div>':'')+
+      '<div class="card">'+reco+'</div>';
+
+    $("#pReco") && ($("#pReco").onclick=function(){ setView('learn'); });
   }
 
   /* ---------- teclado numérico ---------- */
