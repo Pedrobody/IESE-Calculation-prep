@@ -1,17 +1,17 @@
 /* ============================================================
-   Configuración del ranking (Supabase).
+   Leaderboard configuration (Supabase).
    ------------------------------------------------------------
-   La app funciona SIN esto (entrenamiento, práctica y aprendizaje
-   van 100% offline). El ranking online solo se activa cuando
-   rellenas la ANON KEY de abajo.
+   The app works WITHOUT this (training, practice and learning are
+   100% offline). The online leaderboard only turns on when you
+   fill in the public key below.
 
-   Cómo obtener la ANON KEY:
-   Supabase → tu proyecto → Settings → API → Project API keys →
-   copia la clave "anon public" (NO la "service_role") y pégala
-   entre las comillas de SUPABASE_ANON_KEY.
+   How to get the key:
+   Supabase → your project → Settings → API → copy the
+   "anon public" / publishable key (NOT the "service_role" key)
+   and paste it between the quotes of SUPABASE_ANON_KEY.
    ============================================================ */
 window.MMCONFIG = {
   SUPABASE_URL: "https://ezunsbyobljaurrwgwfj.supabase.co",
-  SUPABASE_ANON_KEY: "sb_publishable_krVLYErvtGNKhkRYVgMLvA_6cN8QEYn",   // clave pública (publishable) de Supabase
-  SECTIONS: ["A", "B", "C"]   // secciones disponibles en el onboarding
+  SUPABASE_ANON_KEY: "sb_publishable_krVLYErvtGNKhkRYVgMLvA_6cN8QEYn",   // Supabase public (publishable) key
+  SECTIONS: ["A", "B", "C"]   // sections available in onboarding
 };

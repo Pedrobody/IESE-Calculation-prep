@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-<title>Case Math · Cálculo mental para case interviews</title>
+<title>Case Math · Mental math for case interviews</title>
 <meta name="theme-color" content="#E30613">
 <meta name="description" content="Entrenador de cálculo mental para case interviews: niveles adaptativos, reto diario y ranking.">
 <meta name="google-site-verification" content="08JqPUdTKymTPnwGIJn02uYIwJA0QDCPW0DF2SV38eQ" />
@@ -239,22 +239,22 @@
     <div class="mark">×</div>
     <div style="min-width:0">
       <h1>Case Math</h1>
-      <div class="sub">Cálculo mental · case prep</div>
+      <div class="sub">Mental math · case prep</div>
     </div>
     <div class="spacer"></div>
     <button class="rankchip" id="rankChip"><span class="ic" id="rcIco">🎒</span><span style="min-width:0"><span class="rt" id="rcName">—</span><span class="rx" id="rcXp"></span></span></button>
-    <button class="gear" id="gear" aria-label="Ajustes">⚙</button>
+    <button class="gear" id="gear" aria-label="Settings">⚙</button>
   </div>
 </header>
 
 <main id="app"></main>
 
 <nav class="tabbar" id="tabbar">
-  <button class="t on" data-view="train"><span class="i">🏆</span>Entrenar</button>
-  <button class="t" data-view="challenge"><span class="i">🎯</span>Reto</button>
-  <button class="t" data-view="progress"><span class="i">📈</span>Progreso</button>
+  <button class="t on" data-view="train"><span class="i">🏆</span>Train</button>
+  <button class="t" data-view="challenge"><span class="i">🎯</span>Challenge</button>
+  <button class="t" data-view="progress"><span class="i">📈</span>Progress</button>
   <button class="t" data-view="ranking"><span class="i">🏅</span>Ranking</button>
-  <button class="t" data-view="learn"><span class="i">📚</span>Aprender</button>
+  <button class="t" data-view="learn"><span class="i">📚</span>Learn</button>
 </nav>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
@@ -287,7 +287,7 @@
   var $=function(s,r){ return (r||document).querySelector(s); };
   function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
   function todayISO(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-  function fmt(n){ if(!isFinite(n)) return String(n); var r=Math.round(n*100)/100; return r.toLocaleString('es-ES',{maximumFractionDigits:2}); }
+  function fmt(n){ if(!isFinite(n)) return String(n); var r=Math.round(n*100)/100; return r.toLocaleString('en-US',{maximumFractionDigits:2}); }
   function digitCount(n){ n=Math.abs(n); if(n<1){ var s=String(n).replace('0.','').replace('.',''); return Math.max(1,s.replace(/0+$/,'').length);} return String(Math.round(n)).length; }
   function sigDigits(n){ if(!Number.isInteger(n)){ var s=String(n).replace('.',''); return s.replace(/0+$/,'').length||1;} n=Math.abs(n); if(n===0)return 1; while(n%10===0)n/=10; return String(n).length; }
   function hasDec(n){ return !Number.isInteger(n); }
@@ -315,7 +315,7 @@
   /* ---------- generadores (tag de estrategia para el explicador) ---------- */
   function mkMult(a,b,st){ return {op:'mult',a:a,b:b,ans:+(a*b).toFixed(2),strat:st,text:fmt(a)+' × '+fmt(b)}; }
   function mkDiv(a,b,st){ return {op:'div',a:a,b:b,ans:+(a/b).toFixed(4),strat:st,text:fmt(a)+' ÷ '+fmt(b)}; }
-  function mkPct(p,base,st,est){ return {op:'pct',p:p,base:base,ans:+(p/100*base).toFixed(2),strat:st,estimate:!!est,text:fmt(p)+'% de '+fmt(base)}; }
+  function mkPct(p,base,st,est){ return {op:'pct',p:p,base:base,ans:+(p/100*base).toFixed(2),strat:st,estimate:!!est,text:fmt(p)+'% of '+fmt(base)}; }
   var GEN={
     multZeros:function(d){ var a,b; if(d<=1){a=rpick([10,20,50,100,200,500]);b=rint(2,9);} else if(d<=3){a=rpick([200,500,1000,2000,5000]);b=rpick([3,4,5,6,7,8,9,2.5,1.5]);} else {a=rpick([2000,4000,7500,10000,25000]);b=rpick([2.5,3.5,4.5,7.5,6,8]);} return mkMult(a,b,'mult-zeros'); },
     multComp:function(d){ var a,b; if(d<=1){a=rint(11,19);b=rint(3,9);} else if(d<=2){a=rint(12,49);b=rint(4,9);} else if(d<=3){a=rint(11,99);b=rint(11,29);} else {a=rint(21,99);b=rint(12,49);} return mkMult(a,b,'mult-comp'); },
@@ -330,16 +330,16 @@
 
   /* ---------- niveles (calibrados: banda de score + familias + tiempo objetivo) ---------- */
   var LEVELS=[
-    {n:'Calentamiento',        t:5,  band:[10,16], fams:[['multZeros',1],['divZeros',1],['divZeros',2]], d:'Multiplicar y dividir con números redondos (por 10/100).'},
-    {n:'Tablas y decenas',     t:6,  band:[16,23], fams:[['multComp',1],['multComp',2],['multZeros',2],['divZeros',2]], d:'Tablas y decenas: 13×3, 18×4, 500×8.'},
-    {n:'División limpia',      t:7,  band:[19,27], fams:[['divBreak',1],['divBreak',2],['divFactor',2],['divFactor',3],['divZeros',3]], d:'Dividir partiendo y sumando, y factorizando.'},
-    {n:'Porcentajes bonitos',  t:7,  band:[19,28], fams:[['pctComp',1],['pctComp',2],['divZeros',4],['multZeros',3]], d:'% redondos (10/20/25/50%) apoyándote en 1% y 10%.'},
-    {n:'División ágil',        t:8,  band:[24,33], fams:[['divBreak',3],['divBreak',4],['divFactor',4],['divFactor',5]], d:'Divisiones menos limpias y factorización.'},
-    {n:'Cuadrados y decimales',t:8,  band:[29,40], fams:[['multSquare',3],['multSquare',4],['multZeros',4],['multZeros',5]], d:'Cuadrados (55², 75²) y multiplicar por 2,5 / 7,5.'},
-    {n:'Componentes 2 cifras', t:9,  band:[30,40], fams:[['multComp',3],['multComp',4],['multSquare',2]], d:'2 cifras × 2 cifras descomponiendo (67×33).'},
-    {n:'% que se rompen',      t:10, band:[33,48], fams:[['pctComp',3],['pctComp',4]], d:'% no redondos (9%, 42%, 77%) por componentes.'},
-    {n:'Mix consultor',        t:11, band:[42,51], fams:[['multComplex',3],['multComplex',4],['pctComp',4],['divFactor',5],['multSquare',5]], d:'Mezcla ×/÷/% de nivel medio-alto.'},
-    {n:'Modo examen',          t:13, band:[48,66], fams:[['multComplex',5],['pctEstimate',4],['pctEstimate',5],['pctComp',5]], d:'Todo mezclado, números feos y estimación. Rápido.'}
+    {n:'Warm-up',             t:5,  band:[10,16], fams:[['multZeros',1],['divZeros',1],['divZeros',2]], d:'Multiply and divide with round numbers (by 10/100).'},
+    {n:'Tables & tens',       t:6,  band:[16,23], fams:[['multComp',1],['multComp',2],['multZeros',2],['divZeros',2]], d:'Times tables and tens: 13×3, 18×4, 500×8.'},
+    {n:'Clean division',      t:7,  band:[19,27], fams:[['divBreak',1],['divBreak',2],['divFactor',2],['divFactor',3],['divZeros',3]], d:'Divide by splitting-and-adding, and by factoring.'},
+    {n:'Easy percentages',    t:7,  band:[19,28], fams:[['pctComp',1],['pctComp',2],['divZeros',4],['multZeros',3]], d:'Round % (10/20/25/50%) using 1% and 10%.'},
+    {n:'Nimble division',     t:8,  band:[24,33], fams:[['divBreak',3],['divBreak',4],['divFactor',4],['divFactor',5]], d:'Less clean divisions and factoring.'},
+    {n:'Squares & decimals',  t:8,  band:[29,40], fams:[['multSquare',3],['multSquare',4],['multZeros',4],['multZeros',5]], d:'Squares (55², 75²) and multiplying by 2.5 / 7.5.'},
+    {n:'2-digit components',  t:9,  band:[30,40], fams:[['multComp',3],['multComp',4],['multSquare',2]], d:'2 digits × 2 digits by decomposition (67×33).'},
+    {n:'Tricky percentages',  t:10, band:[33,48], fams:[['pctComp',3],['pctComp',4]], d:'Non-round % (9%, 42%, 77%) by components.'},
+    {n:'Consultant mix',      t:11, band:[42,51], fams:[['multComplex',3],['multComplex',4],['pctComp',4],['divFactor',5],['multSquare',5]], d:'Mix of ×/÷/% at a medium-high level.'},
+    {n:'Exam mode',           t:13, band:[48,66], fams:[['multComplex',5],['pctEstimate',4],['pctEstimate',5],['pctComp',5]], d:'Everything mixed, ugly numbers and estimation. Fast.'}
   ];
   function genForLevel(lv){
     var L=LEVELS[lv-1],best=null,bg=1e9;
@@ -352,7 +352,7 @@
   }
 
   /* ---------- comprobación de respuesta ---------- */
-  function parseAns(s){ s=String(s).trim(); if(s==="")return null; if(s.indexOf(',')>=0&&s.indexOf('.')>=0){s=s.replace(/\./g,'').replace(',','.');} else if(s.indexOf(',')>=0){s=s.replace(',','.');} var v=parseFloat(s); return isNaN(v)?null:v; }
+  function parseAns(s){ s=String(s).trim(); if(s==="")return null; s=s.replace(/,/g,''); var v=parseFloat(s); return isNaN(v)?null:v; }
   function isCorrect(p,val){ if(val==null)return false; var exact=Math.round(p.ans*100)/100;
     if(p.estimate){ var tol=Math.max(1,Math.abs(exact)*0.02); return Math.abs(val-exact)<=tol; }
     return Math.abs(val-exact)<1e-6||Math.round(val*100)/100===exact; }
@@ -364,18 +364,18 @@
 
   /* ---------- logros ---------- */
   var ACHS=[
-    {id:'first',ico:'✅',t:'Primer acierto',d:'Resuelve tu primer problema'},
-    {id:'streak10',ico:'🔥',t:'En racha',d:'10 aciertos seguidos'},
-    {id:'streak20',ico:'🎯',t:'Francotirador',d:'20 aciertos seguidos'},
-    {id:'fast3',ico:'⚡',t:'Velocista',d:'Un acierto en menos de 3 s'},
-    {id:'fast2',ico:'🚀',t:'Rayo',d:'Un acierto en menos de 2 s'},
-    {id:'lvl5',ico:'🧗',t:'A mitad de camino',d:'Llega al nivel 5'},
-    {id:'lvl10',ico:'🏛️',t:'Nivel examen',d:'Llega al nivel 10'},
-    {id:'solved200',ico:'💯',t:'Centurión',d:'200 problemas resueltos'},
-    {id:'perfect',ico:'🌟',t:'Perfeccionista',d:'20 seguidos sin fallo'},
-    {id:'days3',ico:'📅',t:'Constancia',d:'Practica en 3 días distintos'},
-    {id:'allops',ico:'🧮',t:'Triatleta',d:'Acierta ×, ÷ y % en una sesión'},
-    {id:'challenge',ico:'🏅',t:'Competidor',d:'Completa un Reto del día'}
+    {id:'first',ico:'✅',t:'First correct',d:'Solve your first problem'},
+    {id:'streak10',ico:'🔥',t:'On a roll',d:'10 correct in a row'},
+    {id:'streak20',ico:'🎯',t:'Sharpshooter',d:'20 correct in a row'},
+    {id:'fast3',ico:'⚡',t:'Speedster',d:'A correct answer in under 3 s'},
+    {id:'fast2',ico:'🚀',t:'Lightning',d:'A correct answer in under 2 s'},
+    {id:'lvl5',ico:'🧗',t:'Halfway there',d:'Reach level 5'},
+    {id:'lvl10',ico:'🏛️',t:'Exam level',d:'Reach level 10'},
+    {id:'solved200',ico:'💯',t:'Centurion',d:'200 problems solved'},
+    {id:'perfect',ico:'🌟',t:'Perfectionist',d:'20 in a row with no mistake'},
+    {id:'days3',ico:'📅',t:'Consistency',d:'Practise on 3 different days'},
+    {id:'allops',ico:'🧮',t:'Triathlete',d:'Get ×, ÷ and % right in one session'},
+    {id:'challenge',ico:'🏅',t:'Competitor',d:'Complete a Daily Challenge'}
   ];
 
   /* ---------- estado persistente ---------- */
@@ -405,7 +405,7 @@
 
   /* ---------- cuentas + nube (Supabase RPC) ---------- */
   function sbRpc(fn, body){
-    if(!sbReady()) return Promise.reject(new Error('sin conexión configurada'));
+    if(!sbReady()) return Promise.reject(new Error('no connection configured'));
     return fetch(CFG.SUPABASE_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:sbHeaders(),body:JSON.stringify(body)})
       .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error('HTTP '+r.status); return j; }); });
   }
@@ -424,7 +424,7 @@
   /* ---------- toasts ---------- */
   function toast(ico,msg,cls){ var c=$("#toasts"); var el=document.createElement('div'); el.className='toast '+(cls||''); el.innerHTML='<span>'+ico+'</span><span>'+esc(msg)+'</span>'; c.appendChild(el);
     setTimeout(function(){ el.style.transition='opacity .4s,transform .4s'; el.style.opacity='0'; el.style.transform='translateY(10px)'; setTimeout(function(){el.remove();},400); },2400); }
-  function unlock(id){ var p=db.prog; if(p.ach[id])return; var a=ACHS.find(function(x){return x.id===id;}); if(!a)return; p.ach[id]=todayISO(); save(); toast(a.ico,'Logro: '+a.t,'red'); }
+  function unlock(id){ var p=db.prog; if(p.ach[id])return; var a=ACHS.find(function(x){return x.id===id;}); if(!a)return; p.ach[id]=todayISO(); save(); toast(a.ico,'Achievement: '+a.t,'red'); }
 
   /* ---- registro interno de cada respuesta (para el panel de Progreso) ---- */
   function recordAttempt(p, ok, dt, lvl, mode){
@@ -445,12 +445,12 @@
     var rows=RANKS.map(function(k){ var done=db.prog.xp>=k.xp, cur=(k===f.r);
       return '<div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--hairline);'+(cur?'font-weight:800':'')+'">'+
         '<span style="font-size:22px;'+(done?'':'opacity:.4')+'">'+k.ico+'</span>'+
-        '<span style="flex:1;'+(done?'':'color:var(--muted)')+'">'+esc(k.name)+(cur?' · tu rango':'')+'</span>'+
+        '<span style="flex:1;'+(done?'':'color:var(--muted)')+'">'+esc(k.name)+(cur?' · your rank':'')+'</span>'+
         '<span style="font-variant-numeric:tabular-nums;color:'+(done?'var(--red)':'var(--muted)')+'">'+fmt(k.xp)+' XP</span></div>'; }).join('');
-    openSheet('<div class="shead"><h2>Experiencia y rangos</h2><button class="close" data-close>✕</button></div>'+
-      '<p class="note" style="margin-top:0">Ganas <b>XP</b> al acertar (más por rapidez y por racha). Tu <b>rango</b> sube con la XP acumulada. Es distinto del <b>nivel de dificultad</b> de Entrenar.</p>'+
-      '<div class="kicker" style="color:var(--ink);margin:8px 0 4px">'+fmt(db.prog.xp)+' XP acumulada</div>'+rows+
-      '<p class="note">'+(nx?('Te faltan <b>'+fmt(nx.xp-db.prog.xp)+' XP</b> para <b>'+esc(nx.name)+'</b>.'):'Has alcanzado el rango máximo. 👑')+'</p>');
+    openSheet('<div class="shead"><h2>Experience & ranks</h2><button class="close" data-close>✕</button></div>'+
+      '<p class="note" style="margin-top:0">You earn <b>XP</b> for correct answers (more for speed and streaks). Your <b>rank</b> rises with total XP. This is separate from the <b>difficulty level</b> in Train.</p>'+
+      '<div class="kicker" style="color:var(--ink);margin:8px 0 4px">'+fmt(db.prog.xp)+' XP total</div>'+rows+
+      '<p class="note">'+(nx?('<b>'+fmt(nx.xp-db.prog.xp)+' XP</b> to go until <b>'+esc(nx.name)+'</b>.'):'You have reached the top rank. 👑')+'</p>');
   }
 
   /* ============================================================
@@ -470,9 +470,9 @@
   }
 
   /* ============ PROGRESO (estadísticas + gráficas) ============ */
-  var OPS=[['mult','Multiplicación','×'],['div','División','÷'],['pct','Porcentajes','%']];
+  var OPS=[['mult','Multiplication','×'],['div','Division','÷'],['pct','Percentages','%']];
   var OBJ={mult:{t:6,acc:85}, div:{t:7,acc:85}, pct:{t:8,acc:85}};   // objetivos de referencia
-  var STRAT_NAME={'mult-zeros':'× Ceros','mult-comp':'× Componentes','mult-complex':'× Comp. complejos','mult-square':'× Cuadrados','div-zeros':'÷ Ceros','div-break':'÷ Partir y sumar','div-factor':'÷ Factorizar','pct-comp':'% Componentes','pct-estimate':'% Estimar'};
+  var STRAT_NAME={'mult-zeros':'× Zeros','mult-comp':'× Components','mult-complex':'× Complex components','mult-square':'× Squares','div-zeros':'÷ Zeros','div-break':'÷ Split & add','div-factor':'÷ Factoring','pct-comp':'% Components','pct-estimate':'% Estimate'};
   var STRAT_OP={'mult-zeros':'mult','mult-comp':'mult','mult-complex':'mult','mult-square':'mult','div-zeros':'div','div-break':'div','div-factor':'div','pct-comp':'pct','pct-estimate':'pct'};
 
   function acc(e){ return e&&e.n?e.ok/e.n:0; }
@@ -480,7 +480,7 @@
 
   // línea de tendencia (SVG) a partir de puntos {label, v(0..1)}
   function sparkline(pts, valFmt){
-    if(pts.length<2) return '<p class="note">Necesitas practicar en al menos 2 días distintos para ver la tendencia.</p>';
+    if(pts.length<2) return '<p class="note">Practise on at least 2 different days to see the trend.</p>';
     var W=320,H=130,padL=6,padR=6,padT=12,padB=22, iw=W-padL-padR, ih=H-padT-padB;
     var n=pts.length, x=function(i){ return padL+(n===1?iw/2:iw*i/(n-1)); }, y=function(v){ return padT+ih*(1-v); };
     var line=pts.map(function(p,i){ return (i?'L':'M')+x(i).toFixed(1)+' '+y(p.v).toFixed(1); }).join(' ');
@@ -496,8 +496,8 @@
     var s=db.stats, p=db.prog, h=s.history||[];
     var totalN=OPS.reduce(function(a,o){ return a+((s.byOp[o[0]]||{}).n||0); },0);
     if(!totalN){
-      app.innerHTML='<div class="sechead"><div><div class="kicker">Tu rendimiento</div><h2>Progreso</h2></div><div class="rule"></div></div>'+
-        '<div class="card"><div class="empty" style="border:none;padding:30px 10px"><div class="big" style="font-weight:800;font-size:15px;margin-bottom:6px">Aún no hay datos</div><div class="muted">Entrena o juega un Reto y aquí verás tu rendimiento por dificultad y por técnica, tu evolución y en qué mejorar.</div><div style="margin-top:16px"><button class="btn red" id="pGo">Ir a entrenar</button></div></div></div>';
+      app.innerHTML='<div class="sechead"><div><div class="kicker">Your performance</div><h2>Progress</h2></div><div class="rule"></div></div>'+
+        '<div class="card"><div class="empty" style="border:none;padding:30px 10px"><div class="big" style="font-weight:800;font-size:15px;margin-bottom:6px">No data yet</div><div class="muted">Train or play a Challenge and here you\'ll see your performance by difficulty and by technique, your progress over time and what to improve.</div><div style="margin-top:16px"><button class="btn red" id="pGo">Go to Train</button></div></div></div>';
       $("#pGo").onclick=function(){ setView('train'); };
       return;
     }
@@ -506,7 +506,7 @@
     var gAcc=Math.round(totOk/totalN*100), gAvg=(totSum/totalN);
 
     // --- por DIFICULTAD (agrupado por tramos de nivel; el rendimiento solo se compara a igual dificultad) ---
-    var TIERS=[['Básico','niveles 1–3',[1,2,3]],['Intermedio','niveles 4–6',[4,5,6]],['Avanzado','niveles 7–8',[7,8]],['Examen','niveles 9–10',[9,10]]];
+    var TIERS=[['Basic','levels 1–3',[1,2,3]],['Intermediate','levels 4–6',[4,5,6]],['Advanced','levels 7–8',[7,8]],['Exam','levels 9–10',[9,10]]];
     var tierAgg=TIERS.map(function(){return {n:0,ok:0,sum:0};});
     h.forEach(function(a){ for(var i=0;i<TIERS.length;i++){ if(TIERS[i][2].indexOf(a.lv)>=0){ tierAgg[i].n++; if(a.ok)tierAgg[i].ok++; tierAgg[i].sum+=a.t; break; } } });
     var tierRows=TIERS.map(function(T,i){ var e=tierAgg[i]; if(!e.n) return ''; var a=Math.round(acc(e)*100);
@@ -527,33 +527,33 @@
         '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(weak?'var(--red)':'#bdbdbd')+';flex:none"></span>'+
         '<span>'+esc(STRAT_NAME[k])+'</span>'+
         '<span style="margin-left:auto;font-variant-numeric:tabular-nums;color:'+(weak?'var(--red)':'var(--muted)')+';font-weight:800;font-size:12.5px">'+a+'% · '+t.toFixed(1)+'s · '+e.n+'</span></summary>'+
-        '<div class="body"><p style="margin:0 0 2px"><b>¿En qué consiste?</b> '+esc(stratDesc(k))+'</p>'+ex+
-        '<button class="btn ghost" data-learn="1" style="margin-top:10px">Practicar en Aprender</button></div></details>'; }).join('');
+        '<div class="body"><p style="margin:0 0 2px"><b>What it is:</b> '+esc(stratDesc(k))+'</p>'+ex+
+        '<button class="btn ghost" data-learn="1" style="margin-top:10px">Practise in Learn</button></div></details>'; }).join('');
 
     // --- recomendación: técnica más floja con datos suficientes ---
     var reco='';
     if(stratKeys.length && s.byStrat[stratKeys[0]].n>=6){
       var wk=stratKeys[0], we=s.byStrat[wk], wa=Math.round(acc(we)*100), wt=avgT(we).toFixed(1);
-      reco='<div class="reco"><b>Tu técnica más floja: '+esc(STRAT_NAME[wk])+'</b> — '+wa+'% de aciertos y '+wt+'s de media. Repásala arriba y practícala.'+
-        '<div style="margin-top:10px"><button class="btn red" id="pReco">Ver esta técnica en Aprender</button></div></div>';
+      reco='<div class="reco"><b>Your weakest technique: '+esc(STRAT_NAME[wk])+'</b> — '+wa+'% correct and '+wt+'s on average. Review it above and practise it.'+
+        '<div style="margin-top:10px"><button class="btn red" id="pReco">See this technique in Learn</button></div></div>';
     } else {
-      reco='<div class="reco" style="background:var(--box-gray);border-color:var(--hairline)"><b style="color:var(--ink)">Sigue practicando</b> — con unos cuantos problemas más de cada técnica te diré exactamente en qué enfocarte.</div>';
+      reco='<div class="reco" style="background:var(--box-gray);border-color:var(--hairline)"><b style="color:var(--ink)">Keep practising</b> — with a few more problems in each technique I\'ll tell you exactly what to focus on.</div>';
     }
 
     var rf=rankFor(p.xp||0), rpct=rf.nx?Math.min(100,((p.xp-rf.r.xp)/(rf.nx.xp-rf.r.xp))*100):100;
     app.innerHTML=
-      '<div class="sechead"><div><div class="kicker">Tu rendimiento</div><h2>Progreso</h2></div><div class="rule"></div></div>'+
+      '<div class="sechead"><div><div class="kicker">Your performance</div><h2>Progress</h2></div><div class="rule"></div></div>'+
       '<div class="card" id="pRankCard" style="cursor:pointer"><div style="display:flex;align-items:center;gap:12px">'+
         '<div style="width:44px;height:44px;border-radius:12px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:23px;flex:none">'+rf.r.ico+'</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800">'+esc(rf.r.name)+'</div>'+
-          '<div class="note" style="margin:2px 0 0">Nivel de dificultad actual: <b>'+(p.level||1)+'</b> · racha máx '+(p.bestStreak||0)+'</div>'+
+          '<div class="note" style="margin:2px 0 0">Current difficulty level: <b>'+(p.level||1)+'</b> · best streak '+(p.bestStreak||0)+'</div>'+
           '<div class="lvlbar" style="margin-top:7px"><span style="width:'+rpct.toFixed(0)+'%"></span></div></div>'+
-        '<div style="text-align:right;flex:none"><div style="font-size:17px;font-weight:800;font-variant-numeric:tabular-nums">'+fmt(p.xp||0)+'</div><div class="note" style="margin:0">'+(rf.nx?'/ '+fmt(rf.nx.xp)+' XP':'XP máx')+'</div></div>'+
+        '<div style="text-align:right;flex:none"><div style="font-size:17px;font-weight:800;font-variant-numeric:tabular-nums">'+fmt(p.xp||0)+'</div><div class="note" style="margin:0">'+(rf.nx?'/ '+fmt(rf.nx.xp)+' XP':'max XP')+'</div></div>'+
       '</div></div>'+
-      '<div class="hud"><div class="c"><div class="lab">Resueltos</div><div class="val">'+totalN+'</div></div><div class="c"><div class="lab">Precisión</div><div class="val">'+gAcc+'<small>%</small></div></div><div class="c"><div class="lab">Media</div><div class="val">'+gAvg.toFixed(1)+'<small>s</small></div></div></div>'+
-      (tierRows?'<div class="card"><span class="kicker">Por dificultad</span><p class="note" style="margin:-4px 0 12px">Tu acierto y tiempo en cada tramo de nivel. Aquí sí es comparable: mismo tramo = misma dificultad. La marca gris es el objetivo (85%).</p>'+tierRows+'</div>':'')+
-      (techCards?'<div class="card"><span class="kicker">Por técnica</span><p class="note" style="margin:-4px 0 12px">De más floja a mejor (punto rojo = por debajo del 75%). Toca cada una para ver <b>en qué consiste</b> y un ejemplo.</p>'+techCards+'</div>':'')+
-      '<div class="card"><span class="kicker">Evolución (precisión por día)</span>'+sparkline(trendPts,function(p){return Math.round(p.v*100)+'%';})+'</div>'+
+      '<div class="hud"><div class="c"><div class="lab">Solved</div><div class="val">'+totalN+'</div></div><div class="c"><div class="lab">Accuracy</div><div class="val">'+gAcc+'<small>%</small></div></div><div class="c"><div class="lab">Avg</div><div class="val">'+gAvg.toFixed(1)+'<small>s</small></div></div></div>'+
+      (tierRows?'<div class="card"><span class="kicker">By difficulty</span><p class="note" style="margin:-4px 0 12px">Your accuracy and time in each level band. This is fair to compare: same band = same difficulty. The grey mark is the target (85%).</p>'+tierRows+'</div>':'')+
+      (techCards?'<div class="card"><span class="kicker">By technique</span><p class="note" style="margin:-4px 0 12px">Weakest to best (red dot = below 75%). Tap each one to see <b>what it is</b> and an example.</p>'+techCards+'</div>':'')+
+      '<div class="card"><span class="kicker">Trend (accuracy per day)</span>'+sparkline(trendPts,function(p){return Math.round(p.v*100)+'%';})+'</div>'+
       '<div class="card">'+reco+'</div>';
 
     $("#pReco") && ($("#pReco").onclick=function(){ setView('learn'); });
@@ -562,19 +562,19 @@
   }
 
   /* ---------- teclado numérico ---------- */
-  function keypadHTML(){ var ks=['7','8','9','4','5','6','1','2','3','del','0',','];
+  function keypadHTML(){ var ks=['7','8','9','4','5','6','1','2','3','del','0','.'];
     return '<div class="keypad" id="keypad">'+ks.map(function(k){
       if(k==='del') return '<button class="key del" data-k="del">⌫</button>';
-      if(k===',') return '<button class="key" data-k=",">,</button>';
+      if(k==='.') return '<button class="key" data-k=".">.</button>';
       return '<button class="key" data-k="'+k+'">'+k+'</button>';
-    }).join('')+'<button class="key ok" data-k="ok" style="grid-column:1/-1">✓ Comprobar</button></div>'; }
+    }).join('')+'<button class="key ok" data-k="ok" style="grid-column:1/-1">✓ Check</button></div>'; }
 
-  // gestor genérico de entrada por teclado (pantalla + físico)
+  // generic keyboard input handler (on-screen + physical)
   function makeInput(getDisplay, onEnter){
     var entry="";
-    function paint(){ var el=getDisplay(); if(!el)return; if(entry===""){ el.textContent="tu respuesta"; el.classList.add('empty'); } else { el.textContent=entry; el.classList.remove('empty'); } }
+    function paint(){ var el=getDisplay(); if(!el)return; if(entry===""){ el.textContent="your answer"; el.classList.add('empty'); } else { el.textContent=entry; el.classList.remove('empty'); } }
     function press(k){ if(k==='ok'){ onEnter(entry); return; } if(k==='del'){ entry=entry.slice(0,-1); paint(); return; }
-      if(k===','){ if(!/[.,]/.test(entry)&&entry!=="") entry+=','; return void paint(); }
+      if(k==='.'){ if(entry.indexOf('.')<0&&entry!=="") entry+='.'; return void paint(); }
       if(entry.replace(/[^0-9]/g,'').length<9){ entry+=k; paint(); } }
     return { press:press, clear:function(){entry="";paint();}, get:function(){return entry;}, paint:paint };
   }
@@ -594,27 +594,27 @@
 
     $("#tBody").innerHTML =
       '<div class="hud">'+
-        '<div class="c"><div class="lab">Nivel</div><div class="val" id="hLv">—</div><div class="lvlbar"><span id="hLvBar"></span></div></div>'+
-        '<div class="c"><div class="lab">Media sesión</div><div class="val" id="hAvg">—</div></div>'+
-        '<div class="c"><div class="lab">Aciertos</div><div class="val" id="hAcc">—</div></div>'+
+        '<div class="c"><div class="lab">Level</div><div class="val" id="hLv">—</div><div class="lvlbar"><span id="hLvBar"></span></div></div>'+
+        '<div class="c"><div class="lab">Session avg</div><div class="val" id="hAvg">—</div></div>'+
+        '<div class="c"><div class="lab">Accuracy</div><div class="val" id="hAcc">—</div></div>'+
       '</div>'+
       '<div class="card play">'+
         '<div class="combo" id="hCombo">&nbsp;</div>'+
         '<div class="timerbar"><span id="hTimer"></span></div>'+
         '<div id="hEst"></div>'+
         '<div class="problem" id="hProblem">—</div>'+
-        '<div class="answer empty" id="hAns">tu respuesta</div>'+
+        '<div class="answer empty" id="hAns">your answer</div>'+
         '<div class="feedback" id="hFb">&nbsp;</div>'+
         keypadHTML()+
-        '<div class="miniact"><button id="hSkip">Saltar</button><button id="hPause">⏸ Pausar</button><button id="hGuide">📋 Niveles</button></div>'+
+        '<div class="miniact"><button id="hSkip">Skip</button><button id="hPause">⏸ Pause</button><button id="hGuide">📋 Levels</button></div>'+
         '<div style="margin-top:16px">'+
           '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px"><span id="hPerfMsg" style="font-size:11px;font-weight:800;letter-spacing:.02em">&nbsp;</span><span id="hPerfN" class="note" style="margin:0"></span></div>'+
           '<div class="perfmeter"><div class="perf-fill" id="hPerfFill"></div><div class="perf-tick" style="left:42%"></div><div class="perf-tick" style="left:74%"></div></div>'+
-          '<div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);margin-top:4px"><span>🔽 bajas</span><span>subes 🔼</span></div>'+
+          '<div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);margin-top:4px"><span>🔽 level down</span><span>level up 🔼</span></div>'+
         '</div>'+
-        '<div class="note">Este medidor es tu <b>rendimiento reciente</b> (acierto + velocidad de tus últimas respuestas). Sube al acertar rápido y baja al fallar o ir lento; al pasar la marca de la derecha subes de nivel, y por debajo de la izquierda bajas. Pausar protege tu progreso.</div>'+
+        '<div class="note">This meter is your <b>recent performance</b> (accuracy + speed of your last answers). It rises when you answer fast and falls when you miss or go slow; cross the right mark to level up, drop below the left mark to level down. Pausing protects your progress.</div>'+
       '</div>'+
-      '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px" id="achSum">🏅 Logros — '+Object.keys(p.ach).length+'/'+ACHS.length+'</summary><div class="ach-grid" id="achGrid" style="margin-top:12px">'+achGridHTML()+'</div></details>';
+      '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px" id="achSum">🏅 Achievements — '+Object.keys(p.ach).length+'/'+ACHS.length+'</summary><div class="ach-grid" id="achGrid" style="margin-top:12px">'+achGridHTML()+'</div></details>';
 
     var input=makeInput(function(){return $("#hAns");}, submit);
     function paintHUD(){ var L=LEVELS[Math.min(p.level,LEVELS.length)-1];
@@ -622,16 +622,16 @@
       $("#hLvBar").style.width=(p.level/LEVELS.length*100)+'%';
       $("#hAvg").innerHTML=ses.count?(ses.total/ses.count).toFixed(1)+'<small>s</small>':'—';
       $("#hAcc").textContent=ses.count?Math.round(ses.correct/ses.count*100)+'%':'—';
-      $("#hCombo").innerHTML=ses.combo>1?'🔥 Racha ×'+ses.combo:'&nbsp;';
+      $("#hCombo").innerHTML=ses.combo>1?'🔥 Streak ×'+ses.combo:'&nbsp;';
       var pf=windowPerf(), n=p.win.length;
       var fill=$("#hPerfFill"); fill.style.width=Math.round(pf*100)+'%';
       fill.classList.toggle('danger', n>=MINSAMP && pf<=DEMOTE+0.06);
-      $("#hPerfN").textContent=n+'/'+WIN+' respuestas';
+      $("#hPerfN").textContent=n+'/'+WIN+' answers';
       var msg,col='var(--ink)';
-      if(n<MINSAMP){ msg='Calibrando nivel · '+n+'/'+MINSAMP; col='var(--muted)'; }
-      else if(pf>=PROMOTE-0.10){ msg='🔼 A punto de subir de nivel'; col='var(--red)'; }
-      else if(pf<=DEMOTE+0.06){ msg='🔽 Riesgo de bajar de nivel'; col='var(--red)'; }
-      else { msg='Mantén el ritmo'; col='var(--muted)'; }
+      if(n<MINSAMP){ msg='Calibrating level · '+n+'/'+MINSAMP; col='var(--muted)'; }
+      else if(pf>=PROMOTE-0.10){ msg='🔼 About to level up'; col='var(--red)'; }
+      else if(pf<=DEMOTE+0.06){ msg='🔽 At risk of dropping a level'; col='var(--red)'; }
+      else { msg='Keep it up'; col='var(--muted)'; }
       var mEl=$("#hPerfMsg"); mEl.textContent=msg; mEl.style.color=col;
     }
     function windowPerf(){ if(!p.win.length)return 0; return p.win.reduce(function(a,b){return a+b;},0)/p.win.length; }
@@ -640,7 +640,7 @@
         bar.style.width=(frac*100).toFixed(1)+'%'; bar.style.background=frac<1?'var(--red)':'var(--hairline)'; if(frac<1)raf=requestAnimationFrame(tick); };
       raf=requestAnimationFrame(tick); }
     function next(){ ses.paused=false; var L=LEVELS[Math.min(p.level,LEVELS.length)-1]; ses.target=L.t; ses.cur=genForLevel(p.level);
-      $("#hEst").innerHTML=ses.cur.estimate?'<span class="tag-est">≈ estima (±2%)</span>':'';
+      $("#hEst").innerHTML=ses.cur.estimate?'<span class="tag-est">≈ estimate (±2%)</span>':'';
       var pr=$("#hProblem"); pr.textContent=ses.cur.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop');
       input.clear(); ses.shownAt=performance.now(); startTimer(ses.target); }
     function submit(raw){ if(ses.paused||!ses.cur)return; var val=parseAns(raw); if(val==null)return;
@@ -656,37 +656,37 @@
         if(p.solved>=200)unlock('solved200'); if(ses.noFail>=20)unlock('perfect');
         if(ses.ops.mult&&ses.ops.div&&ses.ops.pct)unlock('allops');
         fb.className='feedback ok'; fb.textContent='✓ '+ses.cur.text+' = '+fmt(ses.cur.ans)+' · '+dt.toFixed(1)+'s · +'+xp+' XP';
-      } else { ses.combo=0; ses.noFail=0; fb.className='feedback bad'; fb.textContent='✗ '+raw+' · era '+fmt(ses.cur.ans)+' ('+ses.cur.text+')'; }
+      } else { ses.combo=0; ses.noFail=0; fb.className='feedback bad'; fb.textContent='✗ '+raw+' · was '+fmt(ses.cur.ans)+' ('+ses.cur.text+')'; }
       // ventana móvil de rendimiento -> subir / bajar
       p.win.push(perfOf(ok,dt,ses.target)); if(p.win.length>WIN)p.win.shift();
       if(p.win.length>=MINSAMP){ var perf=p.win.reduce(function(a,b){return a+b;},0)/p.win.length;
         if(perf>=PROMOTE&&p.level<LEVELS.length){ p.level++; p.win=[]; if(p.level>p.maxLevel)p.maxLevel=p.level;
-          if(p.level>=5)unlock('lvl5'); if(p.level>=10)unlock('lvl10'); toast('🏆','¡Subes a nivel '+p.level+': '+LEVELS[p.level-1].n+'!','red'); }
-        else if(perf<=DEMOTE&&p.level>1){ p.level--; p.win=[]; toast('📉','Bajas a nivel '+p.level+': '+LEVELS[p.level-1].n,''); } }
+          if(p.level>=5)unlock('lvl5'); if(p.level>=10)unlock('lvl10'); toast('🏆','Level up! '+p.level+': '+LEVELS[p.level-1].n,'red'); }
+        else if(perf<=DEMOTE&&p.level>1){ p.level--; p.win=[]; toast('📉','Down to level '+p.level+': '+LEVELS[p.level-1].n,''); } }
       paintRank(); save(); paintHUD(); refreshAch(); next();
     }
     function togglePause(){ var b=$("#hPause"),pr=$("#hProblem"),fb=$("#hFb");
-      if(!ses.paused){ ses.paused=true; cancelAnimationFrame(raf); pr.textContent='⏸'; fb.className='feedback'; fb.textContent='Pausado — tu progreso está a salvo'; b.textContent='▶ Reanudar'; }
-      else { ses.paused=false; pr.textContent=ses.cur?ses.cur.text:'—'; fb.className='feedback'; fb.innerHTML='&nbsp;'; b.textContent='⏸ Pausar'; ses.shownAt=performance.now(); startTimer(ses.target); } }
+      if(!ses.paused){ ses.paused=true; cancelAnimationFrame(raf); pr.textContent='⏸'; fb.className='feedback'; fb.textContent='Paused — your progress is safe'; b.textContent='▶ Resume'; }
+      else { ses.paused=false; pr.textContent=ses.cur?ses.cur.text:'—'; fb.className='feedback'; fb.innerHTML='&nbsp;'; b.textContent='⏸ Pause'; ses.shownAt=performance.now(); startTimer(ses.target); } }
 
     $("#keypad").addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(b)input.press(b.dataset.k); });
     $("#hSkip").onclick=function(){ if(ses.paused)return; cancelAnimationFrame(raf); ses.combo=0; var fb=$("#hFb"); fb.className='feedback'; fb.innerHTML='&nbsp;'; paintHUD(); next(); };
     $("#hPause").onclick=togglePause;
     $("#hGuide").onclick=openGuide;
-    keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} else if(e.key===','||e.key==='.')input.press(','); };
+    keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} else if(e.key===','||e.key==='.')input.press('.'); };
     paintHUD(); next();
   }
   function achGridHTML(){ var p=db.prog; return ACHS.map(function(a){ var on=!!p.ach[a.id]; return '<div class="ach '+(on?'':'locked')+'"><span class="ico">'+(on?a.ico:'🔒')+'</span><div><div class="t">'+esc(a.t)+(on?' ✓':'')+'</div><div class="d">'+esc(a.d)+'</div></div></div>'; }).join(''); }
-  function refreshAch(){ var g=$("#achGrid"); if(g)g.innerHTML=achGridHTML(); var s=$("#achSum"); if(s)s.textContent='🏅 Logros — '+Object.keys(db.prog.ach).length+'/'+ACHS.length; }
+  function refreshAch(){ var g=$("#achGrid"); if(g)g.innerHTML=achGridHTML(); var s=$("#achSum"); if(s)s.textContent='🏅 Achievements — '+Object.keys(db.prog.ach).length+'/'+ACHS.length; }
 
   function openGuide(){ var p=db.prog;
     var rows=LEVELS.map(function(L,i){ var n=i+1,cur=n===p.level,passed=n<p.level;
       return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hairline);'+(cur?'font-weight:800':'')+'">'+
         '<span style="width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;'+((passed||cur)?'background:var(--red);color:#fff':'background:var(--box-gray);color:var(--muted)')+'">'+n+'</span>'+
-        '<div style="flex:1;min-width:0"><div style="'+((passed||cur)?'':'color:var(--muted)')+'">'+esc(L.n)+(cur?' · aquí estás':passed?' · superado':'')+'</div><div style="font-size:11px;color:var(--muted)">'+esc(L.d)+'</div></div>'+
-        '<span style="font-size:11px;color:var(--muted);white-space:nowrap">obj. '+L.t+'s</span></div>'; }).join('');
-    openSheet('<div class="shead"><h2>Niveles</h2><button class="close" data-close>✕</button></div>'+
-      '<p class="note" style="margin-top:0">Vas por el nivel <b>'+p.level+'/'+LEVELS.length+'</b> (máximo alcanzado: '+p.maxLevel+'). Dentro de cada nivel los problemas tienen dificultad homogénea; subes o bajas según tu rendimiento reciente.</p>'+rows);
+        '<div style="flex:1;min-width:0"><div style="'+((passed||cur)?'':'color:var(--muted)')+'">'+esc(L.n)+(cur?' · you are here':passed?' · cleared':'')+'</div><div style="font-size:11px;color:var(--muted)">'+esc(L.d)+'</div></div>'+
+        '<span style="font-size:11px;color:var(--muted);white-space:nowrap">target '+L.t+'s</span></div>'; }).join('');
+    openSheet('<div class="shead"><h2>Levels</h2><button class="close" data-close>✕</button></div>'+
+      '<p class="note" style="margin-top:0">You are on level <b>'+p.level+'/'+LEVELS.length+'</b> (highest reached: '+p.maxLevel+'). Within each level the problems have even difficulty; you move up or down based on your recent performance.</p>'+rows);
   }
 
   /* ============ RETO DEL DÍA (seed compartido -> ranking) ============ */
@@ -700,13 +700,13 @@
   function renderChallenge(){
     var id=todayISO(); var rec=db.challenge[id]||{};
     app.innerHTML=
-      '<div class="sechead"><div><div class="kicker">Competición</div><h2>Reto del día</h2></div><div class="rule"></div></div>'+
-      '<div class="card"><p style="margin:0 0 4px">Hoy, <b>'+id+'</b>. Los <b>15 problemas son los mismos para todos</b> los estudiantes: dificultad creciente, cronometrado. Tu puntuación depende de aciertos y velocidad. Envía tu marca al ranking y compite con tu sección.</p>'+
-        (rec.best?'<p class="note">Tu mejor marca de hoy: <b style="color:var(--red)">'+fmt(rec.best)+' pts</b>.</p>':'')+
-        '<div class="row" style="margin-top:12px"><button class="btn red block" id="cStart">▶ '+(rec.done?'Repetir el reto':'Empezar el reto')+'</button></div>'+
-        (sbReady()?'':'<p class="note">⚠️ El ranking online aún no está configurado (falta la clave de Supabase en config.js). Podrás jugar igual y ver tu puntuación en local.</p>')+
+      '<div class="sechead"><div><div class="kicker">Competition</div><h2>Daily Challenge</h2></div><div class="rule"></div></div>'+
+      '<div class="card"><p style="margin:0 0 4px">Today, <b>'+id+'</b>. The <b>15 problems are the same for everyone</b>: increasing difficulty, timed. Your score depends on accuracy and speed. Submit your result to the leaderboard and compete with your section.</p>'+
+        (rec.best?'<p class="note">Your best today: <b style="color:var(--red)">'+fmt(rec.best)+' pts</b>.</p>':'')+
+        '<div class="row" style="margin-top:12px"><button class="btn red block" id="cStart">▶ '+(rec.done?'Replay the challenge':'Start the challenge')+'</button></div>'+
+        (sbReady()?'':'<p class="note">⚠️ The online leaderboard isn\'t set up yet (missing the Supabase key in config.js). You can still play and see your score locally.</p>')+
       '</div>'+
-      '<div class="card"><span class="kicker">Cómo puntúa</span><p style="margin:0" class="note">Cada problema vale más cuanto más difícil (nivel 2 → 10). Aciertas rápido = puntuación completa; aciertas lento = menos; fallas o se acaba el tiempo = 0. Máximo por problema si vas por debajo del tiempo objetivo.</p></div>';
+      '<div class="card"><span class="kicker">How scoring works</span><p style="margin:0" class="note">Each problem is worth more the harder it is (level 2 → 10). Answer fast = full points; answer slow = fewer; miss it or run out of time = 0. Max points per problem if you beat the target time.</p></div>';
     $("#cStart").onclick=function(){ runChallenge(id); };
   }
 
@@ -715,23 +715,23 @@
     function screen(){
       app.innerHTML=
         '<div class="card play">'+
-          '<div class="hud" style="margin:0 0 12px"><div class="c"><div class="lab">Problema</div><div class="val" id="cQn">1<small>/15</small></div></div><div class="c"><div class="lab">Puntos</div><div class="val" id="cScore">0</div></div><div class="c"><div class="lab">Aciertos</div><div class="val" id="cCorr">0</div></div></div>'+
+          '<div class="hud" style="margin:0 0 12px"><div class="c"><div class="lab">Problem</div><div class="val" id="cQn">1<small>/15</small></div></div><div class="c"><div class="lab">Points</div><div class="val" id="cScore">0</div></div><div class="c"><div class="lab">Correct</div><div class="val" id="cCorr">0</div></div></div>'+
           '<div class="timerbar"><span id="cTimer"></span></div>'+
           '<div id="cEst"></div>'+
           '<div class="problem" id="cProblem">—</div>'+
-          '<div class="answer empty" id="cAns">tu respuesta</div>'+
+          '<div class="answer empty" id="cAns">your answer</div>'+
           '<div class="feedback" id="cFb">&nbsp;</div>'+
           keypadHTML()+
-          '<div class="miniact"><button id="cQuit">Abandonar</button></div>'+
+          '<div class="miniact"><button id="cQuit">Quit</button></div>'+
         '</div>';
       $("#keypad").addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(b)input.press(b.dataset.k); });
       $("#cQuit").onclick=function(){ cancelAnimationFrame(raf); setView('challenge'); };
     }
     var input=makeInput(function(){return $("#cAns");},answer);
     function timer(){ cancelAnimationFrame(raf); var bar=$("#cTimer"); var tick=function(){ if(!document.body.contains(bar))return; var el=(performance.now()-shownAt)/1000; var frac=Math.min(1,el/perQ); bar.style.width=(frac*100).toFixed(1)+'%'; bar.style.background=frac<0.8?'var(--red)':'var(--graphite)'; if(frac<1)raf=requestAnimationFrame(tick); else { timedOut=true; answer(input.get()||''); } }; raf=requestAnimationFrame(tick); }
-    function show(){ cur=set[idx]; $("#cQn").innerHTML=(idx+1)+'<small>/15</small>'; $("#cEst").innerHTML=cur.p.estimate?'<span class="tag-est">≈ estima (±2%)</span>':''; var pr=$("#cProblem"); pr.textContent=cur.p.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop'); input.clear(); timedOut=false; shownAt=performance.now(); timer(); }
+    function show(){ cur=set[idx]; $("#cQn").innerHTML=(idx+1)+'<small>/15</small>'; $("#cEst").innerHTML=cur.p.estimate?'<span class="tag-est">≈ estimate (±2%)</span>':''; var pr=$("#cProblem"); pr.textContent=cur.p.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop'); input.clear(); timedOut=false; shownAt=performance.now(); timer(); }
     function answer(raw){ if(!cur)return; cancelAnimationFrame(raf); var dt=(performance.now()-shownAt)/1000; var val=parseAns(raw); var ok=!timedOut&&isCorrect(cur.p,val); var pts=ok?challengePts(cur.lv,ok,dt):0; score+=pts; if(ok)correct++; totalTime+=dt; recordAttempt(cur.p, ok, dt, cur.lv, 'reto');
-      var fb=$("#cFb"); if(ok){ fb.className='feedback ok'; fb.textContent='✓ +'+pts+' pts · '+dt.toFixed(1)+'s'; } else { fb.className='feedback bad'; fb.textContent=(timedOut?'⏱ tiempo · ':'✗ ')+cur.p.text+' = '+fmt(cur.p.ans); }
+      var fb=$("#cFb"); if(ok){ fb.className='feedback ok'; fb.textContent='✓ +'+pts+' pts · '+dt.toFixed(1)+'s'; } else { fb.className='feedback bad'; fb.textContent=(timedOut?'⏱ time · ':'✗ ')+cur.p.text+' = '+fmt(cur.p.ans); }
       $("#cScore").textContent=score; $("#cCorr").textContent=correct;
       idx++; if(idx<set.length){ setTimeout(show,700); } else { setTimeout(finish,800); } cur=null;
     }
@@ -739,21 +739,21 @@
       var rec=db.challenge[id]||{}; var isBest=!rec.best||score>rec.best; rec.done=true; if(isBest)rec.best=score; db.challenge[id]=rec;
       db.prog.xp+=Math.round(score*0.4); unlock('challenge'); paintRank(); save();
       app.innerHTML=
-        '<div class="sechead"><div><div class="kicker">Reto completado</div><h2>Tu resultado</h2></div><div class="rule"></div></div>'+
-        '<div class="card"><div class="bigkpi"><div class="v">'+fmt(score)+'</div><div class="l">puntos'+(isBest?' · ¡nuevo récord!':'')+'</div></div>'+
-          '<div class="hud" style="margin-top:14px"><div class="c"><div class="lab">Aciertos</div><div class="val">'+correct+'<small>/15</small></div></div><div class="c"><div class="lab">Tiempo total</div><div class="val">'+totalTime.toFixed(0)+'<small>s</small></div></div><div class="c"><div class="lab">XP ganada</div><div class="val">+'+Math.round(score*0.4)+'</div></div></div>'+
+        '<div class="sechead"><div><div class="kicker">Challenge complete</div><h2>Your result</h2></div><div class="rule"></div></div>'+
+        '<div class="card"><div class="bigkpi"><div class="v">'+fmt(score)+'</div><div class="l">points'+(isBest?' · new best!':'')+'</div></div>'+
+          '<div class="hud" style="margin-top:14px"><div class="c"><div class="lab">Correct</div><div class="val">'+correct+'<small>/15</small></div></div><div class="c"><div class="lab">Total time</div><div class="val">'+totalTime.toFixed(0)+'<small>s</small></div></div><div class="c"><div class="lab">XP earned</div><div class="val">+'+Math.round(score*0.4)+'</div></div></div>'+
           '<div class="row" style="margin-top:14px">'+
-            (sbReady()?'<button class="btn red block" id="cSubmit">📊 Enviar al ranking</button>':'')+
-            '<button class="btn ghost block" id="cAgain">Repetir</button>'+
-            '<button class="btn ghost block" id="cToRank">Ver ranking</button>'+
+            (sbReady()?'<button class="btn red block" id="cSubmit">📊 Submit to leaderboard</button>':'')+
+            '<button class="btn ghost block" id="cAgain">Replay</button>'+
+            '<button class="btn ghost block" id="cToRank">View ranking</button>'+
           '</div>'+
-          (sbReady()?'<div id="cSubMsg" class="note"></div>':'<p class="note">Configura Supabase (config.js) para competir en el ranking online.</p>')+
+          (sbReady()?'<div id="cSubMsg" class="note"></div>':'<p class="note">Set up Supabase (config.js) to compete on the online leaderboard.</p>')+
         '</div>';
       $("#cAgain")&&($("#cAgain").onclick=function(){ runChallenge(id); });
       $("#cToRank")&&($("#cToRank").onclick=function(){ setView('ranking'); });
-      $("#cSubmit")&&($("#cSubmit").onclick=function(){ var btn=this; btn.disabled=true; btn.textContent='Enviando…';
-        submitScore(id,score,correct,15,totalTime).then(function(){ $("#cSubMsg").innerHTML='✅ Enviado. ¡Mira el ranking!'; toast('🏅','Marca enviada al ranking','red'); })
-        .catch(function(err){ btn.disabled=false; btn.textContent='📊 Enviar al ranking'; $("#cSubMsg").innerHTML='⚠️ No se pudo enviar: '+esc(err.message||'error de red'); }); });
+      $("#cSubmit")&&($("#cSubmit").onclick=function(){ var btn=this; btn.disabled=true; btn.textContent='Submitting…';
+        submitScore(id,score,correct,15,totalTime).then(function(){ $("#cSubMsg").innerHTML='✅ Submitted. Check the ranking!'; toast('🏅','Result submitted to the leaderboard','red'); })
+        .catch(function(err){ btn.disabled=false; btn.textContent='📊 Submit to leaderboard'; $("#cSubMsg").innerHTML='⚠️ Could not submit: '+esc(err.message||'network error'); }); });
     }
     screen(); show();
   }
@@ -775,13 +775,13 @@
   var rankFilter="global";
   function renderRanking(){
     var id=todayISO();
-    var secBtns=['global'].concat(SECTIONS).map(function(s){ var lab=s==='global'?'🌍 Global':'Sección '+s; return '<button class="'+(rankFilter===s?'on':'')+'" data-f="'+s+'">'+lab+'</button>'; }).join('');
+    var secBtns=['global'].concat(SECTIONS).map(function(s){ var lab=s==='global'?'🌍 Global':'Section '+s; return '<button class="'+(rankFilter===s?'on':'')+'" data-f="'+s+'">'+lab+'</button>'; }).join('');
     app.innerHTML=
-      '<div class="sechead"><div><div class="kicker">Clasificación</div><h2>Ranking · Reto de hoy</h2></div><div class="rule"></div></div>'+
-      (sbReady()?'':'<div class="card"><b>Ranking online no configurado.</b><p class="note" style="margin-bottom:0">Falta pegar la clave pública de Supabase en <code>config.js</code>.</p></div>')+
+      '<div class="sechead"><div><div class="kicker">Leaderboard</div><h2>Ranking · Today\'s challenge</h2></div><div class="rule"></div></div>'+
+      (sbReady()?'':'<div class="card"><b>Online leaderboard not set up.</b><p class="note" style="margin-bottom:0">Paste the Supabase public key into <code>config.js</code>.</p></div>')+
       '<div class="filterbar">'+secBtns+'</div>'+
-      (rankFilter==='global'?'<div class="card" id="secCard"><span class="kicker">Competición por secciones</span><p class="note" style="margin:0">Cargando…</p></div>':'')+
-      '<div class="card" id="lbCard"><p class="note" style="margin:0">'+(sbReady()?'Cargando ranking…':'Sin datos online.')+'</p></div>';
+      (rankFilter==='global'?'<div class="card" id="secCard"><span class="kicker">Section vs section</span><p class="note" style="margin:0">Loading…</p></div>':'')+
+      '<div class="card" id="lbCard"><p class="note" style="margin:0">'+(sbReady()?'Loading ranking…':'No online data.')+'</p></div>';
     document.querySelectorAll('.filterbar button').forEach(function(b){ b.onclick=function(){ rankFilter=b.dataset.f; renderRanking(); }; });
     if(!sbReady())return;
     fetchScores(id).then(function(rows){
@@ -795,12 +795,12 @@
       if(secCard){
         var agg={}; all.forEach(function(r){ var s=(r.section||'?'); (agg[s]=agg[s]||{n:0,total:0}); agg[s].n++; agg[s].total+=r.score; });
         var secList=Object.keys(agg).map(function(s){ return {sec:s,n:agg[s].n,total:agg[s].total,avg:Math.round(agg[s].total/agg[s].n)}; }).sort(function(a,b){return b.total-a.total;});
-        if(!secList.length){ secCard.innerHTML='<span class="kicker">Competición por secciones</span><p class="note" style="margin:6px 0 0">Aún sin marcas hoy.</p>'; }
+        if(!secList.length){ secCard.innerHTML='<span class="kicker">Section vs section</span><p class="note" style="margin:6px 0 0">No results yet today.</p>'; }
         else{
           var secRows=secList.map(function(r,i){ var me=r.sec===mine.section; var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-            return '<tr class="'+(me?'me':'')+'"><td class="pos">'+medal+'</td><td>Sección '+esc(r.sec)+'</td><td style="text-align:right">'+r.n+'</td><td style="text-align:right;color:var(--muted)">'+fmt(r.avg)+'</td><td style="text-align:right;font-weight:800">'+fmt(r.total)+'</td></tr>'; }).join('');
-          secCard.innerHTML='<span class="kicker">Competición por secciones</span><p class="note" style="margin:-4px 0 10px">Puntos totales del reto de hoy (suma de la mejor marca de cada estudiante). ¡Que gane tu sección!</p>'+
-            '<table class="lb"><thead><tr><th>#</th><th>Sección</th><th style="text-align:right">Estud.</th><th style="text-align:right">Media</th><th style="text-align:right">Total</th></tr></thead><tbody>'+secRows+'</tbody></table>';
+            return '<tr class="'+(me?'me':'')+'"><td class="pos">'+medal+'</td><td>Section '+esc(r.sec)+'</td><td style="text-align:right">'+r.n+'</td><td style="text-align:right;color:var(--muted)">'+fmt(r.avg)+'</td><td style="text-align:right;font-weight:800">'+fmt(r.total)+'</td></tr>'; }).join('');
+          secCard.innerHTML='<span class="kicker">Section vs section</span><p class="note" style="margin:-4px 0 10px">Total points from today\'s challenge (sum of each student\'s best result). May the best section win!</p>'+
+            '<table class="lb"><thead><tr><th>#</th><th>Section</th><th style="text-align:right">Students</th><th style="text-align:right">Avg</th><th style="text-align:right">Total</th></tr></thead><tbody>'+secRows+'</tbody></table>';
         }
       }
 
@@ -808,57 +808,57 @@
       var list=all.slice();
       if(rankFilter!=='global'){ list=list.filter(function(r){return r.section===rankFilter;}); }
       list.sort(function(a,b){return b.score-a.score;});
-      if(!list.length){ $("#lbCard").innerHTML='<p class="note" style="margin:0">Aún no hay marcas'+(rankFilter==='global'?'':' en esta sección')+'. ¡Sé el primero en el <b>Reto</b>!</p>'; return; }
+      if(!list.length){ $("#lbCard").innerHTML='<p class="note" style="margin:0">No results yet'+(rankFilter==='global'?'':' in this section')+'. Be the first in the <b>Challenge</b>!</p>'; return; }
       var body=list.slice(0,150).map(function(r,i){ var me=((r.nick||'').trim().toLowerCase()===(mine.nick||'').trim().toLowerCase());
         var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
         return '<tr class="'+(me?'me':'')+'"><td class="pos">'+(medal?'<span class="medal">'+medal+'</span>':(i+1))+'</td><td>'+esc(r.nick)+(rankFilter==='global'?'<span class="sec">'+esc(r.section)+'</span>':'')+'</td><td style="text-align:right;font-weight:800">'+fmt(r.score)+'</td></tr>'; }).join('');
-      $("#lbCard").innerHTML='<div class="kicker" style="display:block;margin-bottom:8px">'+(rankFilter==='global'?'Ranking individual':'Sección '+esc(rankFilter))+'</div><table class="lb"><thead><tr><th>#</th><th>Estudiante</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'+body+'</tbody></table>';
-    }).catch(function(err){ $("#lbCard").innerHTML='<p class="note" style="margin:0">⚠️ No se pudo cargar el ranking: '+esc(err.message||'error')+'</p>'; });
+      $("#lbCard").innerHTML='<div class="kicker" style="display:block;margin-bottom:8px">'+(rankFilter==='global'?'Individual ranking':'Section '+esc(rankFilter))+'</div><table class="lb"><thead><tr><th>#</th><th>Student</th><th style="text-align:right">Points</th></tr></thead><tbody>'+body+'</tbody></table>';
+    }).catch(function(err){ $("#lbCard").innerHTML='<p class="note" style="margin:0">⚠️ Could not load the ranking: '+esc(err.message||'error')+'</p>'; });
   }
 
-  /* ============ APRENDER (estrategias del PDF) ============ */
+  /* ============ LEARN (MBB strategies) ============ */
   function explainSteps(p){ var F=fmt; switch(p.strat){
-    case 'mult-zeros':{ var za=tzeros(p.a),cA=p.a/Math.pow(10,za),st=[]; if(za>0)st.push(F(p.a)+' = '+F(cA)+' × '+F(Math.pow(10,za))); st.push(F(cA)+' × '+F(p.b)+' = '+F(cA*p.b)); if(za>0)st.push(F(cA*p.b)+' × '+F(Math.pow(10,za))+' = '+F(p.ans)); return {title:'Factoriza los ceros',steps:st}; }
-    case 'mult-comp': case 'mult-complex':{ var big=p.a>=p.b?p.a:p.b,small=p.a>=p.b?p.b:p.a,tens=Math.floor(big/10)*10,ones=big-tens; return {title:p.strat==='mult-complex'?'Doble descomposición':'Descompón y suma',steps:[F(small)+' × '+F(big)+' = '+F(small)+' × ('+F(tens)+' + '+F(ones)+')',F(small)+' × '+F(tens)+' = '+F(small*tens),F(small)+' × '+F(ones)+' = '+F(small*ones),F(small*tens)+' + '+F(small*ones)+' = '+F(p.ans)]}; }
-    case 'mult-square':{ var n=p.a; if(n%10===5&&n<100){ var dd=(n-5)/10; return {title:'Cuadrados que acaban en 5',steps:[n+'²: toma '+dd+' × '+(dd+1)+' = '+dd*(dd+1),'Pega "25" al final → '+F(p.ans)]}; } var t2=Math.floor(n/10)*10,o2=n-t2; return {title:'Cuadrado por descomposición',steps:[n+'² = '+n+' × ('+t2+' + '+o2+')',n+' × '+t2+' = '+F(n*t2),n+' × '+o2+' = '+F(n*o2),F(n*t2)+' + '+F(n*o2)+' = '+F(p.ans)]}; }
-    case 'div-zeros':{ var z=Math.min(tzeros(p.a),tzeros(p.b)),st2=[]; if(z>0)st2.push('Quita '+z+' cero(s) a cada lado: '+F(p.a/Math.pow(10,z))+' ÷ '+F(p.b/Math.pow(10,z))); st2.push(F(p.a/Math.pow(10,z))+' ÷ '+F(p.b/Math.pow(10,z))+' = '+F(p.ans)); return {title:'Cancela ceros',steps:st2}; }
-    case 'div-break':{ var b=p.b,q=p.ans,p1=b*(Math.floor(q/10)*10),p2=p.a-p1,st3=[F(p.a)+' ÷ '+b+' = ('+F(p1)+' + '+F(p2)+') ÷ '+b]; if(p1)st3.push(F(p1)+' ÷ '+b+' = '+F(p1/b)); st3.push(F(p2)+' ÷ '+b+' = '+F(p2/b)); st3.push(F(p1/b)+' + '+F(p2/b)+' = '+F(p.ans)); return {title:'Parte y suma',steps:st3}; }
-    case 'div-factor':{ var fp=p.factors||factorPair(p.b); if(fp[0]===1)return {title:'División directa',steps:[F(p.a)+' ÷ '+p.b+' = '+F(p.ans)]}; return {title:'Factoriza el divisor en dos pasos',steps:['Divide '+p.b+' en dos números de la tabla: '+p.b+' = '+fp[0]+' × '+fp[1],F(p.a)+' ÷ '+fp[0]+' = '+F(p.a/fp[0]),F(p.a/fp[0])+' ÷ '+fp[1]+' = '+F(p.ans)]}; }
-    case 'pct-comp':{ var base=p.base,P=Math.round(p.p),one=base*0.01,ten=base*0.1,tens3=Math.floor(P/10),ones3=P%10,st4=['1% de '+F(base)+' = '+F(one)+'   ·   10% = '+F(ten)],parts=[]; if(tens3){st4.push((tens3*10)+'% = '+tens3+' × 10% = '+F(ten*tens3));parts.push(ten*tens3);} if(ones3){st4.push(ones3+'% = '+ones3+' × 1% = '+F(one*ones3));parts.push(one*ones3);} if(parts.length>1)st4.push(parts.map(F).join(' + ')+' = '+F(p.ans)); return {title:'Porcentajes por componentes',steps:st4}; }
-    case 'pct-estimate':{ var rp=Math.round(p.p/10)*10,rb=Math.round(p.base/100)*100; return {title:'Estima (redondea y ajusta)',steps:['Redondea: '+F(p.p)+'% ≈ '+rp+'%, '+F(p.base)+' ≈ '+F(rb),rp+'% de '+F(rb)+' = '+F(rp/100*rb),'Exacto: '+F(p.ans)+' (la estimación te deja cerca)']}; }
-    default: return {title:'Cálculo',steps:[p.text+' = '+F(p.ans)]};
+    case 'mult-zeros':{ var za=tzeros(p.a),cA=p.a/Math.pow(10,za),st=[]; if(za>0)st.push(F(p.a)+' = '+F(cA)+' × '+F(Math.pow(10,za))); st.push(F(cA)+' × '+F(p.b)+' = '+F(cA*p.b)); if(za>0)st.push(F(cA*p.b)+' × '+F(Math.pow(10,za))+' = '+F(p.ans)); return {title:'Factor out the zeros',steps:st}; }
+    case 'mult-comp': case 'mult-complex':{ var big=p.a>=p.b?p.a:p.b,small=p.a>=p.b?p.b:p.a,tens=Math.floor(big/10)*10,ones=big-tens; return {title:p.strat==='mult-complex'?'Double decomposition':'Break apart and add',steps:[F(small)+' × '+F(big)+' = '+F(small)+' × ('+F(tens)+' + '+F(ones)+')',F(small)+' × '+F(tens)+' = '+F(small*tens),F(small)+' × '+F(ones)+' = '+F(small*ones),F(small*tens)+' + '+F(small*ones)+' = '+F(p.ans)]}; }
+    case 'mult-square':{ var n=p.a; if(n%10===5&&n<100){ var dd=(n-5)/10; return {title:'Squares ending in 5',steps:[n+'²: take '+dd+' × '+(dd+1)+' = '+dd*(dd+1),'Stick "25" on the end → '+F(p.ans)]}; } var t2=Math.floor(n/10)*10,o2=n-t2; return {title:'Square by decomposition',steps:[n+'² = '+n+' × ('+t2+' + '+o2+')',n+' × '+t2+' = '+F(n*t2),n+' × '+o2+' = '+F(n*o2),F(n*t2)+' + '+F(n*o2)+' = '+F(p.ans)]}; }
+    case 'div-zeros':{ var z=Math.min(tzeros(p.a),tzeros(p.b)),st2=[]; if(z>0)st2.push('Drop '+z+' zero(s) from each side: '+F(p.a/Math.pow(10,z))+' ÷ '+F(p.b/Math.pow(10,z))); st2.push(F(p.a/Math.pow(10,z))+' ÷ '+F(p.b/Math.pow(10,z))+' = '+F(p.ans)); return {title:'Cancel zeros',steps:st2}; }
+    case 'div-break':{ var b=p.b,q=p.ans,p1=b*(Math.floor(q/10)*10),p2=p.a-p1,st3=[F(p.a)+' ÷ '+b+' = ('+F(p1)+' + '+F(p2)+') ÷ '+b]; if(p1)st3.push(F(p1)+' ÷ '+b+' = '+F(p1/b)); st3.push(F(p2)+' ÷ '+b+' = '+F(p2/b)); st3.push(F(p1/b)+' + '+F(p2/b)+' = '+F(p.ans)); return {title:'Split and add',steps:st3}; }
+    case 'div-factor':{ var fp=p.factors||factorPair(p.b); if(fp[0]===1)return {title:'Direct division',steps:[F(p.a)+' ÷ '+p.b+' = '+F(p.ans)]}; return {title:'Factor the divisor in two steps',steps:['Split '+p.b+' into two times-table numbers: '+p.b+' = '+fp[0]+' × '+fp[1],F(p.a)+' ÷ '+fp[0]+' = '+F(p.a/fp[0]),F(p.a/fp[0])+' ÷ '+fp[1]+' = '+F(p.ans)]}; }
+    case 'pct-comp':{ var base=p.base,P=Math.round(p.p),one=base*0.01,ten=base*0.1,tens3=Math.floor(P/10),ones3=P%10,st4=['1% of '+F(base)+' = '+F(one)+'   ·   10% = '+F(ten)],parts=[]; if(tens3){st4.push((tens3*10)+'% = '+tens3+' × 10% = '+F(ten*tens3));parts.push(ten*tens3);} if(ones3){st4.push(ones3+'% = '+ones3+' × 1% = '+F(one*ones3));parts.push(one*ones3);} if(parts.length>1)st4.push(parts.map(F).join(' + ')+' = '+F(p.ans)); return {title:'Percentages by components',steps:st4}; }
+    case 'pct-estimate':{ var rp=Math.round(p.p/10)*10,rb=Math.round(p.base/100)*100; return {title:'Estimate (round and adjust)',steps:['Round: '+F(p.p)+'% ≈ '+rp+'%, '+F(p.base)+' ≈ '+F(rb),rp+'% of '+F(rb)+' = '+F(rp/100*rb),'Exact: '+F(p.ans)+' (the estimate gets you close)']}; }
+    default: return {title:'Calculation',steps:[p.text+' = '+F(p.ans)]};
   } }
-  function workedHTML(p){ var e=explainSteps(p); return '<div class="worked"><b>'+esc(e.title)+'</b>'+e.steps.map(function(s){return '<span class="step">'+s+'</span>';}).join('')+'<span class="step" style="margin-top:6px"><b>Resultado: '+fmt(p.ans)+'</b></span></div>'; }
+  function workedHTML(p){ var e=explainSteps(p); return '<div class="worked"><b>'+esc(e.title)+'</b>'+e.steps.map(function(s){return '<span class="step">'+s+'</span>';}).join('')+'<span class="step" style="margin-top:6px"><b>Result: '+fmt(p.ans)+'</b></span></div>'; }
   var STRATDEFS=[
-    ['mult-zeros','Multiplicación','Ceros','Factoriza los ceros: quítalos, multiplica lo esencial y vuelve a ponerlos.'],
-    ['mult-comp','Multiplicación','Componentes','Rompe un número en decenas + unidades, multiplica cada parte y suma.'],
-    ['mult-complex','Multiplicación','Componentes complejos','Doble ruptura para casos difíciles sin papel.'],
-    ['mult-square','Multiplicación','Cuadrados','Trucos para elevar al cuadrado (los que acaban en 5 son inmediatos).'],
-    ['div-zeros','División','Ceros','Cancela los mismos ceros arriba y abajo antes de dividir.'],
-    ['div-break','División','Partir y sumar','Divide el número en trozos “limpios” y suma los resultados.'],
-    ['div-factor','División','Factorizar','Parte el divisor en dos números de la tabla y divide en dos pasos (÷12 = ÷3 y luego ÷4).'],
-    ['pct-comp','Porcentajes','Por componentes','Apóyate en el 1% y el 10% y combínalos (40% = 4×10%).'],
-    ['pct-estimate','Porcentajes','Estimar','Redondea % y base para estimar rápido; en un caso, pregunta si vale estimar.']
+    ['mult-zeros','Multiplication','Zeros','Factor out the zeros: drop them, multiply the essential part, then put them back.'],
+    ['mult-comp','Multiplication','Components','Break a number into tens + units, multiply each part and add.'],
+    ['mult-complex','Multiplication','Complex components','Double break-apart for hard cases with no paper.'],
+    ['mult-square','Multiplication','Squares','Tricks for squaring (numbers ending in 5 are instant).'],
+    ['div-zeros','Division','Zeros','Cancel the same zeros top and bottom before dividing.'],
+    ['div-break','Division','Split & add','Split the number into "clean" chunks and add the results.'],
+    ['div-factor','Division','Factoring','Split the divisor into two times-table numbers and divide in two steps (÷12 = ÷3 then ÷4).'],
+    ['pct-comp','Percentages','By components','Lean on 1% and 10% and combine them (40% = 4×10%).'],
+    ['pct-estimate','Percentages','Estimate','Round the % and the base to estimate fast; in a case, ask whether estimating is OK.']
   ];
   var EXGEN={'mult-zeros':function(){return GEN.multZeros(4);},'mult-comp':function(){return GEN.multComp(3);},'mult-complex':function(){return GEN.multComplex(4);},'mult-square':function(){return GEN.multSquare(3);},'div-zeros':function(){return GEN.divZeros(3);},'div-break':function(){return GEN.divBreak(3);},'div-factor':function(){return GEN.divFactor(3);},'pct-comp':function(){return GEN.pctComp(4);},'pct-estimate':function(){return GEN.pctEstimate(3);}};
   var LEARN_WHEN={
-    'mult-zeros':'Cuando algún número es redondo o acaba en ceros (200, 1.500, o ×2,5 / ×7,5).',
-    'mult-comp':'Para multiplicar dos números de 2 cifras de cabeza.',
-    'mult-complex':'Cuando uno tiene 3 cifras: descomponlo en partes manejables.',
-    'mult-square':'Al elevar al cuadrado; los que acaban en 5 son inmediatos.',
-    'div-zeros':'Cuando dividendo y divisor comparten ceros: cancélalos primero.',
-    'div-break':'Divisor pequeño (3–8): parte el número en trozos que salgan limpios.',
-    'div-factor':'Divisor que se parte en dos números de la tabla (12 = 3×4, 24 = 4×6): divide en dos pasos.',
-    'pct-comp':'Casi cualquier %: combina 10% y 1% (40% = 4×10%, 3% = 3×1%).',
-    'pct-estimate':'% incómodos sobre bases grandes cuando basta una buena estimación.'
+    'mult-zeros':'When a number is round or ends in zeros (200, 1,500, or ×2.5 / ×7.5).',
+    'mult-comp':'To multiply two 2-digit numbers in your head.',
+    'mult-complex':'When one has 3 digits: break it into manageable parts.',
+    'mult-square':'When squaring a number; those ending in 5 are instant.',
+    'div-zeros':'When the dividend and divisor share zeros: cancel them first.',
+    'div-break':'Small divisor (3–8): split the number into chunks that divide cleanly.',
+    'div-factor':'Divisor that splits into two times-table numbers (12 = 3×4, 24 = 4×6): divide in two steps.',
+    'pct-comp':'Almost any %: combine 10% and 1% (40% = 4×10%, 3% = 3×1%).',
+    'pct-estimate':'Awkward % over big bases when a good estimate is enough.'
   };
   function learnMastery(key){ var e=db.stats.byStrat[key];
-    if(!e||e.n<5) return {lab:(e&&e.n)?'Poco practicado':'Sin practicar', cls:'none', n:e?e.n:0};
-    var a=e.ok/e.n, cls=a>=0.85?'done':(a>=0.70?'prog':'weak'), lab=a>=0.85?'Dominado':(a>=0.70?'En progreso':'A mejorar');
+    if(!e||e.n<5) return {lab:(e&&e.n)?'Barely practised':'Not practised', cls:'none', n:e?e.n:0};
+    var a=e.ok/e.n, cls=a>=0.85?'done':(a>=0.70?'prog':'weak'), lab=a>=0.85?'Mastered':(a>=0.70?'In progress':'Needs work');
     return {lab:lab, cls:cls, acc:Math.round(a*100), t:e.sum/e.n, n:e.n}; }
 
   function renderLearn(){
-    var CATS=[['Multiplicación','×'],['División','÷'],['Porcentajes','%']];
+    var CATS=[['Multiplication','×'],['Division','÷'],['Percentages','%']];
     function paintMap(){
       keydownHandler=null;
       var groups=CATS.map(function(c){
@@ -870,8 +870,8 @@
         return '<div class="card"><span class="kicker">'+c[1]+' '+esc(c[0])+'</span>'+rows+'</div>';
       }).join('');
       app.innerHTML=
-        '<div class="sechead"><div><div class="kicker">Técnicas · Mental Math (MBB)</div><h2>Aprender</h2></div><div class="rule"></div></div>'+
-        '<div class="card"><p style="margin:0">Aprende cada técnica de cálculo mental, mira un ejemplo resuelto y <b>practícala por separado</b>. El puntito muestra tu maestría: <span class="tdot none" style="display:inline-block;vertical-align:middle"></span> sin practicar · <span class="tdot weak" style="display:inline-block;vertical-align:middle"></span> a mejorar · <span class="tdot prog" style="display:inline-block;vertical-align:middle"></span> en progreso · <span class="tdot done" style="display:inline-block;vertical-align:middle"></span> dominado.</p></div>'+
+        '<div class="sechead"><div><div class="kicker">Techniques · Mental Math (MBB)</div><h2>Learn</h2></div><div class="rule"></div></div>'+
+        '<div class="card"><p style="margin:0">Learn each mental-math technique, see a worked example and <b>practise it on its own</b>. The dot shows your mastery: <span class="tdot none" style="display:inline-block;vertical-align:middle"></span> not practised · <span class="tdot weak" style="display:inline-block;vertical-align:middle"></span> needs work · <span class="tdot prog" style="display:inline-block;vertical-align:middle"></span> in progress · <span class="tdot done" style="display:inline-block;vertical-align:middle"></span> mastered.</p></div>'+
         groups;
       app.querySelectorAll('.trow').forEach(function(b){ b.onclick=function(){ paintLesson(b.dataset.key); }; });
     }
@@ -880,17 +880,17 @@
       var def=STRATDEFS.filter(function(s){return s[0]===key;})[0]; if(!def) return paintMap();
       var m=learnMastery(key), ex=EXGEN[key]();
       var masteryHTML = m.cls==='none'
-        ? '<p class="note" style="margin:0">Aún no tienes datos de esta técnica. Practícala para medir tu maestría.</p>'
+        ? '<p class="note" style="margin:0">No data yet for this technique. Practise it to measure your mastery.</p>'
         : '<div class="pbar-row" style="margin:0"><div class="pl">'+esc(m.lab)+'</div><div class="pbar-track"><div class="pbar-fill" style="width:'+m.acc+'%"></div><div class="pbar-tick" style="left:85%"></div></div><div class="pbar-val"><b>'+m.acc+'%</b> · '+m.t.toFixed(1)+'s · '+m.n+'</div></div>';
       app.innerHTML=
-        '<button class="backlink" id="lnBack">← Todas las técnicas</button>'+
+        '<button class="backlink" id="lnBack">← All techniques</button>'+
         '<div class="sechead"><div><div class="kicker">'+esc(def[1])+'</div><h2>'+esc(def[2])+'</h2></div><div class="rule"></div></div>'+
         '<div class="card">'+
-          '<div class="lessonblock"><h4>La idea</h4><p style="margin:0">'+esc(def[3])+'</p></div>'+
-          '<div class="lessonblock"><h4>Cuándo usarla</h4><p style="margin:0">'+esc(LEARN_WHEN[key]||'')+'</p></div>'+
-          '<div class="lessonblock"><h4>Ejemplo resuelto</h4><div id="lnEx">'+workedHTML(ex)+'</div><button class="btn ghost" id="lnOther" style="margin-top:8px">Otro ejemplo</button></div>'+
-          '<div class="lessonblock"><h4>Tu maestría</h4>'+masteryHTML+'</div>'+
-          '<button class="btn red block" id="lnDrill">Practicar 10 de esta técnica</button>'+
+          '<div class="lessonblock"><h4>The idea</h4><p style="margin:0">'+esc(def[3])+'</p></div>'+
+          '<div class="lessonblock"><h4>When to use it</h4><p style="margin:0">'+esc(LEARN_WHEN[key]||'')+'</p></div>'+
+          '<div class="lessonblock"><h4>Worked example</h4><div id="lnEx">'+workedHTML(ex)+'</div><button class="btn ghost" id="lnOther" style="margin-top:8px">Another example</button></div>'+
+          '<div class="lessonblock"><h4>Your mastery</h4>'+masteryHTML+'</div>'+
+          '<button class="btn red block" id="lnDrill">Practise 10 of this technique</button>'+
         '</div>';
       $("#lnBack").onclick=paintMap;
       $("#lnOther").onclick=function(){ $("#lnEx").innerHTML=workedHTML(EXGEN[key]()); };
@@ -900,35 +900,35 @@
       var def=STRATDEFS.filter(function(s){return s[0]===key;})[0], N=10, idx=0, correct=0, totalT=0, cur=null, shownAt=0;
       function screen(){
         app.innerHTML=
-          '<div class="sechead"><div><div class="kicker">Practicando · '+esc(def[2])+'</div><h2 id="dQn">1/'+N+'</h2></div><div class="rule"></div></div>'+
+          '<div class="sechead"><div><div class="kicker">Practising · '+esc(def[2])+'</div><h2 id="dQn">1/'+N+'</h2></div><div class="rule"></div></div>'+
           '<div class="card play">'+
             '<div id="dEst"></div>'+
             '<div class="problem" id="dProblem">—</div>'+
-            '<div class="answer empty" id="dAns">tu respuesta</div>'+
+            '<div class="answer empty" id="dAns">your answer</div>'+
             '<div class="feedback" id="dFb">&nbsp;</div>'+
             keypadHTML()+
-            '<div class="miniact"><button id="dQuit">Salir</button></div>'+
+            '<div class="miniact"><button id="dQuit">Quit</button></div>'+
           '</div>';
         $("#keypad").addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(b)input.press(b.dataset.k); });
         $("#dQuit").onclick=function(){ paintLesson(key); };
       }
       var input=makeInput(function(){return $("#dAns");}, answer);
-      function show(){ cur=EXGEN[key](); $("#dQn").textContent=(idx+1)+'/'+N; $("#dEst").innerHTML=cur.estimate?'<span class="tag-est">≈ estima (±2%)</span>':''; var pr=$("#dProblem"); pr.textContent=cur.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop'); input.clear(); shownAt=performance.now(); }
+      function show(){ cur=EXGEN[key](); $("#dQn").textContent=(idx+1)+'/'+N; $("#dEst").innerHTML=cur.estimate?'<span class="tag-est">≈ estimate (±2%)</span>':''; var pr=$("#dProblem"); pr.textContent=cur.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop'); input.clear(); shownAt=performance.now(); }
       function answer(raw){ if(!cur)return; var val=parseAns(raw); if(val==null)return; var dt=(performance.now()-shownAt)/1000, ok=isCorrect(cur,val);
         if(ok)correct++; totalT+=dt; recordAttempt(cur, ok, dt, 0, 'learn');
         var fb=$("#dFb"); fb.className='feedback '+(ok?'ok':'bad'); fb.textContent=(ok?'✓ ':'✗ ')+cur.text+' = '+fmt(cur.ans)+(ok?' · '+dt.toFixed(1)+'s':'');
         idx++; save(); var t=cur; cur=null; if(idx<N){ setTimeout(show,750); } else { setTimeout(finish,850); } }
       function finish(){ var m=learnMastery(key);
         app.innerHTML=
-          '<div class="sechead"><div><div class="kicker">Práctica terminada</div><h2>'+esc(def[2])+'</h2></div><div class="rule"></div></div>'+
-          '<div class="card"><div class="bigkpi"><div class="v">'+Math.round(correct/N*100)+'%</div><div class="l">aciertos ('+correct+'/'+N+')</div></div>'+
-            '<div class="hud" style="margin-top:14px"><div class="c"><div class="lab">Media</div><div class="val">'+(totalT/N).toFixed(1)+'<small>s</small></div></div><div class="c"><div class="lab">Maestría</div><div class="val" style="font-size:15px">'+esc(m.lab)+'</div></div></div>'+
-            '<div class="row" style="margin-top:14px"><button class="btn red block" id="dAgain">Practicar 10 más</button><button class="btn ghost block" id="dBack">Volver a la técnica</button></div>'+
+          '<div class="sechead"><div><div class="kicker">Practice finished</div><h2>'+esc(def[2])+'</h2></div><div class="rule"></div></div>'+
+          '<div class="card"><div class="bigkpi"><div class="v">'+Math.round(correct/N*100)+'%</div><div class="l">correct ('+correct+'/'+N+')</div></div>'+
+            '<div class="hud" style="margin-top:14px"><div class="c"><div class="lab">Avg</div><div class="val">'+(totalT/N).toFixed(1)+'<small>s</small></div></div><div class="c"><div class="lab">Mastery</div><div class="val" style="font-size:15px">'+esc(m.lab)+'</div></div></div>'+
+            '<div class="row" style="margin-top:14px"><button class="btn red block" id="dAgain">Practise 10 more</button><button class="btn ghost block" id="dBack">Back to the technique</button></div>'+
           '</div>';
         $("#dAgain").onclick=function(){ runDrill(key); };
         $("#dBack").onclick=function(){ paintLesson(key); };
       }
-      keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} else if(e.key===','||e.key==='.')input.press(','); };
+      keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} else if(e.key===','||e.key==='.')input.press('.'); };
       screen(); show();
     }
     paintMap();
@@ -940,46 +940,46 @@
     function paint(prefill){
       var isNew=mode==='new', section='';
       app.innerHTML=
-        '<div class="sechead"><div><div class="kicker">Bienvenido/a</div><h2>Case Math</h2></div><div class="rule"></div></div>'+
+        '<div class="sechead"><div><div class="kicker">Welcome</div><h2>Case Math</h2></div><div class="rule"></div></div>'+
         '<div class="card">'+
-          '<p style="margin-top:0">Entrena cálculo mental para tus <b>case interviews</b>: niveles adaptativos, reto diario y ranking con tus compañeros. <span class="muted">Proyecto de estudiantes, no oficial y sin afiliación con ninguna institución.</span></p>'+
-          '<div class="seg" id="obSeg"><button data-m="new" class="'+(isNew?'on':'')+'">Soy nuevo/a</button><button data-m="login" class="'+(!isNew?'on':'')+'">Ya tengo cuenta</button></div>'+
-          '<div class="field"><label>Nombre y apellido (o apodo)</label><input id="obNick" maxlength="24" placeholder="p. ej. Pedro Bodega" autocomplete="off"></div>'+
-          (isNew?'<div class="field"><label>Tu sección</label><div class="secpick" id="obSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'">'+s+'</button>';}).join('')+'</div></div>':'')+
-          '<div class="field"><label>PIN de 4 números'+(isNew?' (para recuperar tu cuenta en otro dispositivo)':'')+'</label><input id="obPin" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" style="letter-spacing:.45em;font-size:22px;font-weight:800;max-width:150px;text-align:center"></div>'+
+          '<p style="margin-top:0">Practise mental math for your <b>case interviews</b>: adaptive levels, a daily challenge and a leaderboard with your classmates. <span class="muted">A student project, unofficial and not affiliated with any institution.</span></p>'+
+          '<div class="seg" id="obSeg"><button data-m="new" class="'+(isNew?'on':'')+'">I\'m new</button><button data-m="login" class="'+(!isNew?'on':'')+'">I have an account</button></div>'+
+          '<div class="field"><label>First and last name (or nickname)</label><input id="obNick" maxlength="24" placeholder="e.g. Pedro Bodega" autocomplete="off"></div>'+
+          (isNew?'<div class="field"><label>Your section</label><div class="secpick" id="obSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'">'+s+'</button>';}).join('')+'</div></div>':'')+
+          '<div class="field"><label>4-digit PIN'+(isNew?' (to recover your account on another device)':'')+'</label><input id="obPin" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" style="letter-spacing:.45em;font-size:22px;font-weight:800;max-width:150px;text-align:center"></div>'+
           '<div class="feedback" id="obErr" style="text-align:left;min-height:20px">&nbsp;</div>'+
-          '<button class="btn red block" id="obGo">'+(isNew?'Crear cuenta y entrar':'Entrar')+'</button>'+
-          '<p class="note">'+(isNew?'Tu nombre te identifica en el ranking. Apunta tu PIN: lo necesitas para entrar desde otro móvil.':'Entra con el mismo nombre y PIN con el que te registraste — recuperas tu progreso.')+'</p>'+
+          '<button class="btn red block" id="obGo">'+(isNew?'Create account & start':'Sign in')+'</button>'+
+          '<p class="note">'+(isNew?'Your name identifies you on the leaderboard. Note down your PIN: you\'ll need it to sign in from another device.':'Sign in with the same name and PIN you registered with — you\'ll recover your progress.')+'</p>'+
         '</div>';
       var nickEl=$("#obNick"), pinEl=$("#obPin"), go=$("#obGo"), err=$("#obErr");
       if(prefill){ nickEl.value=prefill.nick||''; if(prefill.msg){ err.className='feedback bad'; err.textContent=prefill.msg; } }
       pinEl.addEventListener('input',function(){ pinEl.value=pinEl.value.replace(/\D/g,'').slice(0,4); });
       document.querySelectorAll('#obSeg button').forEach(function(b){ b.onclick=function(){ mode=b.dataset.m; paint(); }; });
       if(isNew) document.querySelectorAll('#obSec button').forEach(function(b){ b.onclick=function(){ section=b.dataset.s; document.querySelectorAll('#obSec button').forEach(function(x){x.classList.toggle('on',x===b);}); }; });
-      function fail(m){ err.className='feedback bad'; err.textContent=m; go.disabled=false; go.textContent=isNew?'Crear cuenta y entrar':'Entrar'; }
-      function enter(nick,section2){ db.profile={nick:nick,section:section2}; db.auth={nick:nick,pin:pinEl.value}; save(); toast('👋','¡Hola, '+nick+'!','red'); setView('train'); }
+      function fail(m){ err.className='feedback bad'; err.textContent=m; go.disabled=false; go.textContent=isNew?'Create account & start':'Sign in'; }
+      function enter(nick,section2){ db.profile={nick:nick,section:section2}; db.auth={nick:nick,pin:pinEl.value}; save(); toast('👋','Hi, '+nick+'!','red'); setView('train'); }
       go.onclick=function(){
         var nick=nickEl.value.trim(), pin=pinEl.value;
-        if(nick.length<2) return fail('Escribe tu nombre (mínimo 2 letras).');
-        if(!/^[0-9]{4}$/.test(pin)) return fail('El PIN debe ser de 4 números.');
-        if(isNew && !section) return fail('Elige tu sección.');
-        go.disabled=true; go.textContent='Un momento…'; err.className='feedback'; err.innerHTML='&nbsp;';
-        if(!sbReady()){ return enter(nick, section||'A'); }   // sin backend: cuenta local
+        if(nick.length<2) return fail('Enter your name (at least 2 letters).');
+        if(!/^[0-9]{4}$/.test(pin)) return fail('The PIN must be 4 digits.');
+        if(isNew && !section) return fail('Choose your section.');
+        go.disabled=true; go.textContent='One moment…'; err.className='feedback'; err.innerHTML='&nbsp;';
+        if(!sbReady()){ return enter(nick, section||'A'); }   // no backend: local account
         if(isNew){
           accountRegister(nick,section,pin).then(function(res){
             if(res.ok){ enter(nick,section); }
-            else if(res.error==='taken'){ mode='login'; paint({nick:nick, msg:'Ese nombre ya existe. Si eres tú, entra con tu PIN.'}); }
-            else if(res.error==='pin_format') fail('El PIN debe ser de 4 números.');
-            else if(res.error==='nick_short') fail('Escribe tu nombre (mínimo 2 letras).');
-            else fail('No se pudo crear la cuenta. Prueba de nuevo.');
-          }).catch(function(){ fail('Sin conexión. Inténtalo de nuevo.'); });
+            else if(res.error==='taken'){ mode='login'; paint({nick:nick, msg:'That name already exists. If it\'s you, sign in with your PIN.'}); }
+            else if(res.error==='pin_format') fail('The PIN must be 4 digits.');
+            else if(res.error==='nick_short') fail('Enter your name (at least 2 letters).');
+            else fail('Could not create the account. Please try again.');
+          }).catch(function(){ fail('No connection. Please try again.'); });
         } else {
           accountLogin(nick,pin).then(function(res){
             if(res.ok){ applyCloudState(res.state); enter(res.nick,res.section); }
-            else if(res.error==='not_found') fail('No existe esa cuenta. Si eres nuevo/a, usa «Soy nuevo/a».');
-            else if(res.error==='bad_pin') fail('PIN incorrecto.');
-            else fail('No se pudo entrar. Inténtalo de nuevo.');
-          }).catch(function(){ fail('Sin conexión. Inténtalo de nuevo.'); });
+            else if(res.error==='not_found') fail('No account with that name. If you\'re new, use "I\'m new".');
+            else if(res.error==='bad_pin') fail('Wrong PIN.');
+            else fail('Could not sign in. Please try again.');
+          }).catch(function(){ fail('No connection. Please try again.'); });
         }
       };
     }
@@ -991,21 +991,21 @@
   function closeSheet(){ $("#overlay").classList.remove('on'); $("#sheet").innerHTML=""; }
   $("#overlay").addEventListener('click',function(e){ if(e.target===$("#overlay"))closeSheet(); });
   function openSettings(){ var pr=db.profile||{nick:"",section:""};
-    openSheet('<div class="shead"><h2>Ajustes</h2><button class="close" data-close>✕</button></div>'+
-      '<div class="field"><label>Cuenta</label><div style="font-size:16px;font-weight:800">'+esc(pr.nick)+'</div><div class="note" style="margin-top:2px">Tu nombre y tu PIN identifican tu cuenta en todos tus dispositivos.</div></div>'+
-      '<div class="field"><label>Sección</label><div class="secpick" id="stSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'" class="'+(pr.section===s?'on':'')+'">'+s+'</button>';}).join('')+'</div></div>'+
-      '<button class="btn red block" id="stSave">Guardar sección</button>'+
+    openSheet('<div class="shead"><h2>Settings</h2><button class="close" data-close>✕</button></div>'+
+      '<div class="field"><label>Account</label><div style="font-size:16px;font-weight:800">'+esc(pr.nick)+'</div><div class="note" style="margin-top:2px">Your name and PIN identify your account across all your devices.</div></div>'+
+      '<div class="field"><label>Section</label><div class="secpick" id="stSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'" class="'+(pr.section===s?'on':'')+'">'+s+'</button>';}).join('')+'</div></div>'+
+      '<button class="btn red block" id="stSave">Save section</button>'+
       '<div style="height:12px"></div>'+
-      '<button class="btn ghost block" id="stLogout">Cerrar sesión</button>'+
+      '<button class="btn ghost block" id="stLogout">Sign out</button>'+
       '<div style="height:8px"></div>'+
-      '<button class="btn ghost block" id="stReset" style="color:var(--red)">Reiniciar mi progreso (nivel, XP, logros)</button>'+
-      '<p class="note">Instala la app: en iPhone, Compartir → “Añadir a pantalla de inicio”. En Android, menú → “Instalar app”.</p>'+
-      '<p class="note">Case Math · v1.0 · Proyecto de estudiantes, no oficial y sin afiliación con ninguna institución. Estrategias basadas en “Consulting &amp; DI Fundamentals: Mental Math”.</p>');
+      '<button class="btn ghost block" id="stReset" style="color:var(--red)">Reset my progress (level, XP, achievements)</button>'+
+      '<p class="note">Install the app: on iPhone, Share → “Add to Home Screen”. On Android, menu → “Install app”.</p>'+
+      '<p class="note">Case Math · v1.0 · A student project, unofficial and not affiliated with any institution. Strategies based on “Consulting &amp; DI Fundamentals: Mental Math”.</p>');
     var sec=pr.section;
     $("#sheet").querySelectorAll('#stSec button').forEach(function(b){ b.onclick=function(){ sec=b.dataset.s; $("#sheet").querySelectorAll('#stSec button').forEach(function(x){x.classList.toggle('on',x===b);}); }; });
-    $("#stSave").onclick=function(){ db.profile.section=sec||pr.section||SECTIONS[0]; save(); closeSheet(); toast('✅','Sección guardada',''); render(); };
-    $("#stLogout").onclick=function(){ if(!confirm('¿Cerrar sesión en este dispositivo? Podrás volver a entrar con tu nombre y PIN.'))return; db.auth=null; db.profile=null; save(); closeSheet(); toast('👋','Sesión cerrada',''); setView('train'); };
-    $("#stReset").onclick=function(){ if(!confirm('¿Reiniciar TODO tu progreso (nivel, XP, logros, estadísticas)? Esto no se puede deshacer.'))return; db.prog={}; db.stats={}; db.challenge={}; normalize(db); save(); closeSheet(); toast('🔄','Progreso reiniciado',''); setView('train'); };
+    $("#stSave").onclick=function(){ db.profile.section=sec||pr.section||SECTIONS[0]; save(); closeSheet(); toast('✅','Section saved',''); render(); };
+    $("#stLogout").onclick=function(){ if(!confirm('Sign out on this device? You can sign back in with your name and PIN.'))return; db.auth=null; db.profile=null; save(); closeSheet(); toast('👋','Signed out',''); setView('train'); };
+    $("#stReset").onclick=function(){ if(!confirm('Reset ALL your progress (level, XP, achievements, stats)? This cannot be undone.'))return; db.prog={}; db.stats={}; db.challenge={}; normalize(db); save(); closeSheet(); toast('🔄','Progress reset',''); setView('train'); };
   }
 
   /* ============ NAV + arranque ============ */
