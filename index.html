@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-<title>Cálculo IESE · Case Math</title>
+<title>Case Math · Cálculo mental para case interviews</title>
 <meta name="theme-color" content="#E30613">
 <meta name="description" content="Entrenador de cálculo mental para case interviews: niveles adaptativos, reto diario y ranking.">
 <meta name="google-site-verification" content="08JqPUdTKymTPnwGIJn02uYIwJA0QDCPW0DF2SV38eQ" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Cálculo IESE">
+<meta name="apple-mobile-web-app-title" content="Case Math">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -238,8 +238,8 @@
   <div class="bar">
     <div class="mark">×</div>
     <div style="min-width:0">
-      <h1>Cálculo IESE</h1>
-      <div class="sub">Case Math Trainer</div>
+      <h1>Case Math</h1>
+      <div class="sub">Cálculo mental · case prep</div>
     </div>
     <div class="spacer"></div>
     <button class="rankchip" id="rankChip"><span class="ic" id="rcIco">🎒</span><span style="min-width:0"><span class="rt" id="rcName">—</span><span class="rx" id="rcXp"></span></span></button>
@@ -265,7 +265,7 @@
 "use strict";
 (function(){
 /* ============================================================
-   IESE Calculation Prep — entrenador de cálculo mental
+   Case Math — entrenador de cálculo mental
    Un solo archivo. Progreso en localStorage. Ranking opcional
    vía Supabase (config.js). Motor de dificultad calibrado por
    score + bandas; progresión por ventana móvil (tiempo+acierto).
@@ -940,9 +940,9 @@
     function paint(prefill){
       var isNew=mode==='new', section='';
       app.innerHTML=
-        '<div class="sechead"><div><div class="kicker">Bienvenido/a</div><h2>Cálculo IESE</h2></div><div class="rule"></div></div>'+
+        '<div class="sechead"><div><div class="kicker">Bienvenido/a</div><h2>Case Math</h2></div><div class="rule"></div></div>'+
         '<div class="card">'+
-          '<p style="margin-top:0">Entrena cálculo mental para tus <b>case interviews</b>: niveles adaptativos, reto diario y ranking con tus compañeros. <span class="muted">Herramienta de estudio no oficial.</span></p>'+
+          '<p style="margin-top:0">Entrena cálculo mental para tus <b>case interviews</b>: niveles adaptativos, reto diario y ranking con tus compañeros. <span class="muted">Proyecto de estudiantes, no oficial y sin afiliación con ninguna institución.</span></p>'+
           '<div class="seg" id="obSeg"><button data-m="new" class="'+(isNew?'on':'')+'">Soy nuevo/a</button><button data-m="login" class="'+(!isNew?'on':'')+'">Ya tengo cuenta</button></div>'+
           '<div class="field"><label>Nombre y apellido (o apodo)</label><input id="obNick" maxlength="24" placeholder="p. ej. Pedro Bodega" autocomplete="off"></div>'+
           (isNew?'<div class="field"><label>Tu sección</label><div class="secpick" id="obSec">'+SECTIONS.map(function(s){return '<button data-s="'+s+'">'+s+'</button>';}).join('')+'</div></div>':'')+
@@ -1000,7 +1000,7 @@
       '<div style="height:8px"></div>'+
       '<button class="btn ghost block" id="stReset" style="color:var(--red)">Reiniciar mi progreso (nivel, XP, logros)</button>'+
       '<p class="note">Instala la app: en iPhone, Compartir → “Añadir a pantalla de inicio”. En Android, menú → “Instalar app”.</p>'+
-      '<p class="note">Versión 1.0 · IESE Calculation Prep · Estrategias basadas en “Consulting & DI Fundamentals: Mental Math”.</p>');
+      '<p class="note">Case Math · v1.0 · Proyecto de estudiantes, no oficial y sin afiliación con ninguna institución. Estrategias basadas en “Consulting &amp; DI Fundamentals: Mental Math”.</p>');
     var sec=pr.section;
     $("#sheet").querySelectorAll('#stSec button').forEach(function(b){ b.onclick=function(){ sec=b.dataset.s; $("#sheet").querySelectorAll('#stSec button').forEach(function(x){x.classList.toggle('on',x===b);}); }; });
     $("#stSave").onclick=function(){ db.profile.section=sec||pr.section||SECTIONS[0]; save(); closeSheet(); toast('✅','Sección guardada',''); render(); };

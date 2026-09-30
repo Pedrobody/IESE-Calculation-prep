@@ -1,7 +1,7 @@
 {
-  "name": "IESE Calculation Prep",
-  "short_name": "Cálculo IESE",
-  "description": "Entrenador de cálculo mental para case interviews — niveles adaptativos, reto diario y ranking.",
+  "name": "Case Math · Cálculo mental",
+  "short_name": "Case Math",
+  "description": "Entrenador de cálculo mental para case interviews: niveles adaptativos, reto diario y ranking. Proyecto de estudiantes, no oficial.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
