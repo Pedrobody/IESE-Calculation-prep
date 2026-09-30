@@ -342,7 +342,11 @@
     var p=d.prog;
     p.level=p.level||1; p.win=p.win||[]; p.xp=p.xp||0; p.solved=p.solved||0; p.correct=p.correct||0;
     p.bestStreak=p.bestStreak||0; p.maxLevel=p.maxLevel||1; p.ach=p.ach||{}; p.days=p.days||[]; p.byType=p.byType||{mult:0,div:0,pct:0};
-    d.free=d.free||{left:{counts:[2],digits:[1,2,3,4,5,6,7,8,9]},right:{counts:[1],digits:[2,3,4,5,6,7,8,9]}};
+    delete d.free;                 // "Práctica libre" retirada de esta app
+    d.stats=d.stats||{};           // registro interno de rendimiento (base del panel de Progreso)
+    d.stats.byStrat=d.stats.byStrat||{};   // {strat:{n,ok,sum}}  (sum = segundos acumulados)
+    d.stats.byOp=d.stats.byOp||{};         // {op:{n,ok,sum}}
+    d.stats.history=d.stats.history||[];   // [{ts,op,st,lv,ok,t,m}] últimas ~1000 respuestas
     d.challenge=d.challenge||{};   // {dateISO:{best,done}}
     if(!d.clientId){ d.clientId='c'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
     return d;
@@ -353,6 +357,15 @@
   function toast(ico,msg,cls){ var c=$("#toasts"); var el=document.createElement('div'); el.className='toast '+(cls||''); el.innerHTML='<span>'+ico+'</span><span>'+esc(msg)+'</span>'; c.appendChild(el);
     setTimeout(function(){ el.style.transition='opacity .4s,transform .4s'; el.style.opacity='0'; el.style.transform='translateY(10px)'; setTimeout(function(){el.remove();},400); },2400); }
   function unlock(id){ var p=db.prog; if(p.ach[id])return; var a=ACHS.find(function(x){return x.id===id;}); if(!a)return; p.ach[id]=todayISO(); save(); toast(a.ico,'Logro: '+a.t,'red'); }
+
+  /* ---- registro interno de cada respuesta (para el panel de Progreso) ---- */
+  function recordAttempt(p, ok, dt, lvl, mode){
+    var s=db.stats, strat=p.strat||p.op, op=p.op;
+    var e=s.byStrat[strat]||(s.byStrat[strat]={n:0,ok:0,sum:0}); e.n++; if(ok)e.ok++; e.sum+=dt;
+    var o=s.byOp[op]||(s.byOp[op]={n:0,ok:0,sum:0}); o.n++; if(ok)o.ok++; o.sum+=dt;
+    s.history.push({ts:Date.now(),op:op,st:strat,lv:lvl||0,ok:ok?1:0,t:Math.round(dt*10)/10,m:mode||'a'});
+    if(s.history.length>1000) s.history.shift();
+  }
 
   /* ---------- header rank ---------- */
   function paintRank(){ var f=rankFor(db.prog.xp); $("#rcIco").textContent=f.r.ico; $("#rcName").textContent=f.r.name;
@@ -394,14 +407,9 @@
   /* ============ ENTRENAR (adaptativo + libre) ============ */
   var WIN=8,PROMOTE=0.74,DEMOTE=0.42,MINSAMP=6;
   function perfOf(ok,time,target){ if(!ok)return 0; var r=time/target; if(r<=0.6)return 1; if(r<=1)return .85; if(r<=1.5)return .6; if(r<=2.5)return .3; return .15; }
-  var trainMode = "adapt";
-
   function renderTrain(){
-    app.innerHTML =
-      '<div class="seg" id="tSeg"><button data-m="adapt" class="'+(trainMode==='adapt'?'on':'')+'">🏆 Adaptativo</button><button data-m="free" class="'+(trainMode==='free'?'on':'')+'">🎛️ Práctica libre</button></div>'+
-      '<div id="tBody"></div>';
-    document.querySelectorAll('#tSeg button').forEach(function(b){ b.onclick=function(){ trainMode=b.dataset.m; cancelAnimationFrame(raf); renderTrain(); }; });
-    if(trainMode==='adapt') renderAdaptive(); else renderFree();
+    app.innerHTML = '<div id="tBody"></div>';
+    renderAdaptive();
   }
 
   function renderAdaptive(){
@@ -452,6 +460,7 @@
     function submit(raw){ if(ses.paused||!ses.cur)return; var val=parseAns(raw); if(val==null)return;
       cancelAnimationFrame(raf); var dt=(performance.now()-ses.shownAt)/1000; var ok=isCorrect(ses.cur,val);
       ses.count++; ses.total+=dt; if(ok)ses.correct++; p.solved++; p.byType[ses.cur.op]=(p.byType[ses.cur.op]||0)+1;
+      recordAttempt(ses.cur, ok, dt, p.level, 'adapt');
       var fb=$("#hFb");
       if(ok){ p.correct++; ses.combo++; ses.noFail++; ses.ops[ses.cur.op]=1;
         var xp=awardXP(p.level,dt,ses.target,ses.combo); p.xp+=xp;
@@ -494,40 +503,11 @@
       '<p class="note" style="margin-top:0">Vas por el nivel <b>'+p.level+'/'+LEVELS.length+'</b> (máximo alcanzado: '+p.maxLevel+'). Dentro de cada nivel los problemas tienen dificultad homogénea; subes o bajas según tu rendimiento reciente.</p>'+rows);
   }
 
-  /* ---------- Práctica libre (config multiplicación) ---------- */
-  function renderFree(){
-    var f=db.free; ["left","right"].forEach(function(k){ var s=f[k]; s.counts=(s.counts&&s.counts.length)?s.counts:[1]; s.digits=(s.digits&&s.digits.length)?s.digits:[1,2,3,4,5,6,7,8,9]; });
-    var ses={count:0,total:0,correct:0,cur:null,shownAt:0};
-    var countOpts=[1,2,3,4,5],digitOpts=[1,2,3,4,5,6,7,8,9];
-    function chipRow(side,key,opts){ return '<div class="chips" data-side="'+side+'" data-key="'+key+'">'+opts.map(function(v){return '<button class="chip '+(f[side][key].indexOf(v)>=0?'on':'')+'" data-val="'+v+'">'+v+'</button>';}).join('')+'</div>'; }
-    function sideBlock(side,title){ return '<div class="side"><h3>'+title+'</h3><div class="sublabel">nº de cifras</div>'+chipRow(side,'counts',countOpts)+'<div class="sublabel">cifras que pueden salir</div>'+chipRow(side,'digits',digitOpts)+'</div>'; }
-    $("#tBody").innerHTML=
-      '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px">⚙️ Configurar multiplicación</summary><div style="margin-top:12px">'+sideBlock('left','Número izquierdo')+sideBlock('right','Número derecho')+'<p class="note">Elige el nº de cifras y qué cifras (1–9) pueden salir por cada lado. Sin niveles ni ranking: práctica pura.</p></div></details>'+
-      '<div class="card play">'+
-        '<div class="hud" style="margin:0 0 12px"><div class="c"><div class="lab">Problemas</div><div class="val" id="fCount">0</div></div><div class="c"><div class="lab">Media</div><div class="val" id="fAvg">—</div></div><div class="c"><div class="lab">Aciertos</div><div class="val" id="fAcc">—</div></div></div>'+
-        '<div class="problem" id="fProblem">—</div>'+
-        '<div class="answer empty" id="fAns">tu respuesta</div>'+
-        '<div class="feedback" id="fFb">&nbsp;</div>'+
-        keypadHTML()+
-        '<div class="miniact"><button id="fSkip">Saltar</button><button id="fReset">Reiniciar sesión</button></div>'+
-      '</div>';
-    document.querySelectorAll('#tBody .chips').forEach(function(row){ var side=row.dataset.side,key=row.dataset.key;
-      row.querySelectorAll('.chip').forEach(function(chip){ chip.onclick=function(){ var val=Number(chip.dataset.val),arr=f[side][key],i=arr.indexOf(val); if(i>=0){ if(arr.length>1)arr.splice(i,1);} else { arr.push(val); arr.sort(function(a,b){return a-b;}); } save(); row.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',f[side][key].indexOf(Number(c.dataset.val))>=0);}); }; });
-    });
-    function buildNum(side){ var counts=side.counts,digits=side.digits,nd=rpick(counts),s=""; for(var i=0;i<nd;i++)s+=String(rpick(digits)); return parseInt(s,10); }
-    var input=makeInput(function(){return $("#fAns");},submit);
-    function stats(){ $("#fCount").textContent=ses.count; $("#fAvg").innerHTML=ses.count?(ses.total/ses.count).toFixed(1)+'<small>s</small>':'—'; $("#fAcc").textContent=ses.count?Math.round(ses.correct/ses.count*100)+'%':'—'; }
-    function next(){ var a=buildNum(f.left),b=buildNum(f.right); ses.cur={a:a,b:b,ans:a*b}; $("#fProblem").textContent=a+' × '+b; input.clear(); ses.shownAt=performance.now(); }
-    function submit(raw){ if(!ses.cur)return; var v=parseInt(String(raw).replace(/\D/g,''),10); if(isNaN(v))return; var t=(performance.now()-ses.shownAt)/1000; var ok=v===ses.cur.ans; ses.count++; ses.total+=t; if(ok)ses.correct++; var fb=$("#fFb"); fb.className='feedback '+(ok?'ok':'bad'); fb.textContent=ok?'✓ '+ses.cur.a+'×'+ses.cur.b+' = '+ses.cur.ans+' · '+t.toFixed(1)+'s':'✗ '+raw+' · era '+ses.cur.ans; stats(); next(); }
-    $("#keypad").addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(b)input.press(b.dataset.k); });
-    $("#fSkip").onclick=function(){ $("#fFb").innerHTML='&nbsp;'; next(); };
-    $("#fReset").onclick=function(){ ses={count:0,total:0,correct:0,cur:null,shownAt:0}; stats(); next(); };
-    keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} };
-    stats(); next();
-  }
-
   /* ============ RETO DEL DÍA (seed compartido -> ranking) ============ */
-  var CHALLENGE_LEVELS=[2,3,4,5,5,6,6,7,7,8,8,9,9,10,10];
+  // Tope realista de examen de consultoría: multiplicaciones 2×2 cifras,
+  // divisiones complejas y % que se rompen. SIN multiplicaciones de 3 cifras
+  // (niveles 9-10) ni estimación: eso quedaba demasiado complicado para el reto.
+  var CHALLENGE_LEVELS=[2,3,3,4,4,5,5,6,6,7,7,8,6,7,8];
   function buildChallenge(id){ return withSeed(seedFromString('reto-'+id), function(){ return CHALLENGE_LEVELS.map(function(lv){ return {lv:lv, p:genForLevel(lv)}; }); }); }
   function challengePts(lv,ok,dt){ if(!ok)return 0; var target=LEVELS[lv-1].t; var maxPts=60+lv*14; var sf=Math.min(1.15,Math.max(0.3,target/dt)); return Math.round(maxPts*sf); }
 
@@ -564,7 +544,7 @@
     var input=makeInput(function(){return $("#cAns");},answer);
     function timer(){ cancelAnimationFrame(raf); var bar=$("#cTimer"); var tick=function(){ if(!document.body.contains(bar))return; var el=(performance.now()-shownAt)/1000; var frac=Math.min(1,el/perQ); bar.style.width=(frac*100).toFixed(1)+'%'; bar.style.background=frac<0.8?'var(--red)':'var(--graphite)'; if(frac<1)raf=requestAnimationFrame(tick); else { timedOut=true; answer(input.get()||''); } }; raf=requestAnimationFrame(tick); }
     function show(){ cur=set[idx]; $("#cQn").innerHTML=(idx+1)+'<small>/15</small>'; $("#cEst").innerHTML=cur.p.estimate?'<span class="tag-est">≈ estima (±2%)</span>':''; var pr=$("#cProblem"); pr.textContent=cur.p.text; pr.classList.remove('pop'); void pr.offsetWidth; pr.classList.add('pop'); input.clear(); timedOut=false; shownAt=performance.now(); timer(); }
-    function answer(raw){ if(!cur)return; cancelAnimationFrame(raf); var dt=(performance.now()-shownAt)/1000; var val=parseAns(raw); var ok=!timedOut&&isCorrect(cur.p,val); var pts=ok?challengePts(cur.lv,ok,dt):0; score+=pts; if(ok)correct++; totalTime+=dt;
+    function answer(raw){ if(!cur)return; cancelAnimationFrame(raf); var dt=(performance.now()-shownAt)/1000; var val=parseAns(raw); var ok=!timedOut&&isCorrect(cur.p,val); var pts=ok?challengePts(cur.lv,ok,dt):0; score+=pts; if(ok)correct++; totalTime+=dt; recordAttempt(cur.p, ok, dt, cur.lv, 'reto');
       var fb=$("#cFb"); if(ok){ fb.className='feedback ok'; fb.textContent='✓ +'+pts+' pts · '+dt.toFixed(1)+'s'; } else { fb.className='feedback bad'; fb.textContent=(timedOut?'⏱ tiempo · ':'✗ ')+cur.p.text+' = '+fmt(cur.p.ans); }
       $("#cScore").textContent=score; $("#cCorr").textContent=correct;
       idx++; if(idx<set.length){ setTimeout(show,700); } else { setTimeout(finish,800); } cur=null;
@@ -722,7 +702,7 @@
   document.addEventListener('keydown',function(e){ if(keydownHandler)keydownHandler(e); });
   document.querySelectorAll("nav.tabbar .t").forEach(function(b){ b.onclick=function(){ keydownHandler=null; setView(b.dataset.view); }; });
   $("#gear").onclick=openSettings;
-  $("#rankChip").onclick=function(){ if(view==='train'&&trainMode==='adapt')openGuide(); else setView('train'); };
+  $("#rankChip").onclick=function(){ if(view==='train')openGuide(); else setView('train'); };
 
   // service worker (solo hospedada)
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){ navigator.serviceWorker.register('sw.js').catch(function(){}); }

@@ -13,5 +13,5 @@
 window.MMCONFIG = {
   SUPABASE_URL: "https://ezunsbyobljaurrwgwfj.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_krVLYErvtGNKhkRYVgMLvA_6cN8QEYn",   // clave pública (publishable) de Supabase
-  SECTIONS: ["A", "B", "C", "D", "E"]   // secciones disponibles en el onboarding
+  SECTIONS: ["A", "B", "C"]   // secciones disponibles en el onboarding
 };
