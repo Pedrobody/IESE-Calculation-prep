@@ -6,6 +6,7 @@
 <title>Cálculo IESE · Case Math</title>
 <meta name="theme-color" content="#E30613">
 <meta name="description" content="Entrenador de cálculo mental para case interviews: niveles adaptativos, reto diario y ranking.">
+<meta name="google-site-verification" content="08JqPUdTKymTPnwGIJn02uYIwJA0QDCPW0DF2SV38eQ" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cálculo IESE">
@@ -322,7 +323,7 @@
     multComplex:function(d){ var a=rint(101,d>=5?899:399),b=rint(12,d>=5?89:39); return mkMult(a,b,'mult-complex'); },
     divZeros:function(d){ var q,div; if(d<=1){div=rpick([10,100]);q=rint(2,20);} else if(d<=3){div=rpick([10,20,50,100,1000]);q=rpick([2,3,4,5,6,7,8,9,12,15,20]);} else {div=rpick([200,500,2500]);q=rpick([3,4,6,8,12,20,40]);} return mkDiv(q*div,div,'div-zeros'); },
     divBreak:function(d){ var div,q; if(d<=2){div=rpick([3,4,5,6]);q=rint(20,120);} else {div=rpick([3,4,6,7,8]);q=rint(30,299);} return mkDiv(div*q,div,'div-break'); },
-    divFactor:function(d){ if(d>=4&&rnd()<0.5){var base=rpick([15,25,35,45,55,65,75]);return mkDiv(base*base,base,'div-factor');} var div=rpick(d<=3?[7,8,9,11,12]:[11,12,13,15,16]);var q=rint(6,d<=3?60:120); return mkDiv(div*q,div,'div-factor'); },
+    divFactor:function(d){ var f1=rpick([3,4,5,6]), f2=rpick([4,6,7,8,9]); var div=f1*f2, q=rint(4,d<=3?24:50); var p=mkDiv(div*q,div,'div-factor'); p.factors=[f1,f2]; return p; },
     pctComp:function(d){ var p,base; if(d<=1){p=rpick([10,20,25,50]);base=rpick([200,400,500,800,1000,1200]);} else if(d<=2){p=rpick([5,10,15,20,25,30,40]);base=rpick([400,560,800,900,1100,1200]);} else if(d<=3){p=rpick([15,30,45,60,75,90]);base=rpick([560,800,950,1050,1230,1600]);} else {p=rpick([9,11,16,42,53,77,83]);base=rint(240,4800);} return mkPct(p,base,'pct-comp'); },
     pctEstimate:function(d){ var p=rpick([33,49,53,66,67,77,83]);var base=rint(1000,d>=5?25000:12000); return mkPct(p,base,'pct-estimate',true); }
   };
@@ -822,7 +823,7 @@
     case 'mult-square':{ var n=p.a; if(n%10===5&&n<100){ var dd=(n-5)/10; return {title:'Cuadrados que acaban en 5',steps:[n+'²: toma '+dd+' × '+(dd+1)+' = '+dd*(dd+1),'Pega "25" al final → '+F(p.ans)]}; } var t2=Math.floor(n/10)*10,o2=n-t2; return {title:'Cuadrado por descomposición',steps:[n+'² = '+n+' × ('+t2+' + '+o2+')',n+' × '+t2+' = '+F(n*t2),n+' × '+o2+' = '+F(n*o2),F(n*t2)+' + '+F(n*o2)+' = '+F(p.ans)]}; }
     case 'div-zeros':{ var z=Math.min(tzeros(p.a),tzeros(p.b)),st2=[]; if(z>0)st2.push('Quita '+z+' cero(s) a cada lado: '+F(p.a/Math.pow(10,z))+' ÷ '+F(p.b/Math.pow(10,z))); st2.push(F(p.a/Math.pow(10,z))+' ÷ '+F(p.b/Math.pow(10,z))+' = '+F(p.ans)); return {title:'Cancela ceros',steps:st2}; }
     case 'div-break':{ var b=p.b,q=p.ans,p1=b*(Math.floor(q/10)*10),p2=p.a-p1,st3=[F(p.a)+' ÷ '+b+' = ('+F(p1)+' + '+F(p2)+') ÷ '+b]; if(p1)st3.push(F(p1)+' ÷ '+b+' = '+F(p1/b)); st3.push(F(p2)+' ÷ '+b+' = '+F(p2/b)); st3.push(F(p1/b)+' + '+F(p2/b)+' = '+F(p.ans)); return {title:'Parte y suma',steps:st3}; }
-    case 'div-factor':{ if(p.a===p.b*p.b)return {title:'Reconoce el cuadrado',steps:[F(p.a)+' = '+p.b+'² → '+F(p.a)+' ÷ '+p.b+' = '+p.b]}; var fp=factorPair(p.b); if(fp[0]===1)return {title:'División directa',steps:[F(p.a)+' ÷ '+p.b+' = '+F(p.ans)]}; return {title:'Factoriza el divisor',steps:[p.b+' = '+fp[0]+' × '+fp[1],F(p.a)+' ÷ '+fp[0]+' = '+F(p.a/fp[0]),F(p.a/fp[0])+' ÷ '+fp[1]+' = '+F(p.ans)]}; }
+    case 'div-factor':{ var fp=p.factors||factorPair(p.b); if(fp[0]===1)return {title:'División directa',steps:[F(p.a)+' ÷ '+p.b+' = '+F(p.ans)]}; return {title:'Factoriza el divisor en dos pasos',steps:['Divide '+p.b+' en dos números de la tabla: '+p.b+' = '+fp[0]+' × '+fp[1],F(p.a)+' ÷ '+fp[0]+' = '+F(p.a/fp[0]),F(p.a/fp[0])+' ÷ '+fp[1]+' = '+F(p.ans)]}; }
     case 'pct-comp':{ var base=p.base,P=Math.round(p.p),one=base*0.01,ten=base*0.1,tens3=Math.floor(P/10),ones3=P%10,st4=['1% de '+F(base)+' = '+F(one)+'   ·   10% = '+F(ten)],parts=[]; if(tens3){st4.push((tens3*10)+'% = '+tens3+' × 10% = '+F(ten*tens3));parts.push(ten*tens3);} if(ones3){st4.push(ones3+'% = '+ones3+' × 1% = '+F(one*ones3));parts.push(one*ones3);} if(parts.length>1)st4.push(parts.map(F).join(' + ')+' = '+F(p.ans)); return {title:'Porcentajes por componentes',steps:st4}; }
     case 'pct-estimate':{ var rp=Math.round(p.p/10)*10,rb=Math.round(p.base/100)*100; return {title:'Estima (redondea y ajusta)',steps:['Redondea: '+F(p.p)+'% ≈ '+rp+'%, '+F(p.base)+' ≈ '+F(rb),rp+'% de '+F(rb)+' = '+F(rp/100*rb),'Exacto: '+F(p.ans)+' (la estimación te deja cerca)']}; }
     default: return {title:'Cálculo',steps:[p.text+' = '+F(p.ans)]};
@@ -835,11 +836,11 @@
     ['mult-square','Multiplicación','Cuadrados','Trucos para elevar al cuadrado (los que acaban en 5 son inmediatos).'],
     ['div-zeros','División','Ceros','Cancela los mismos ceros arriba y abajo antes de dividir.'],
     ['div-break','División','Partir y sumar','Divide el número en trozos “limpios” y suma los resultados.'],
-    ['div-factor','División','Factorizar','Factoriza el divisor (o reconoce cuadrados: 4.225 ÷ 65 = 65).'],
+    ['div-factor','División','Factorizar','Parte el divisor en dos números de la tabla y divide en dos pasos (÷12 = ÷3 y luego ÷4).'],
     ['pct-comp','Porcentajes','Por componentes','Apóyate en el 1% y el 10% y combínalos (40% = 4×10%).'],
     ['pct-estimate','Porcentajes','Estimar','Redondea % y base para estimar rápido; en un caso, pregunta si vale estimar.']
   ];
-  var EXGEN={'mult-zeros':function(){return GEN.multZeros(4);},'mult-comp':function(){return GEN.multComp(3);},'mult-complex':function(){return GEN.multComplex(4);},'mult-square':function(){return GEN.multSquare(3);},'div-zeros':function(){return GEN.divZeros(3);},'div-break':function(){return GEN.divBreak(3);},'div-factor':function(){var b=rpick([45,55,65,75]);return mkDiv(b*b,b,'div-factor');},'pct-comp':function(){return GEN.pctComp(4);},'pct-estimate':function(){return GEN.pctEstimate(3);}};
+  var EXGEN={'mult-zeros':function(){return GEN.multZeros(4);},'mult-comp':function(){return GEN.multComp(3);},'mult-complex':function(){return GEN.multComplex(4);},'mult-square':function(){return GEN.multSquare(3);},'div-zeros':function(){return GEN.divZeros(3);},'div-break':function(){return GEN.divBreak(3);},'div-factor':function(){return GEN.divFactor(3);},'pct-comp':function(){return GEN.pctComp(4);},'pct-estimate':function(){return GEN.pctEstimate(3);}};
   var LEARN_WHEN={
     'mult-zeros':'Cuando algún número es redondo o acaba en ceros (200, 1.500, o ×2,5 / ×7,5).',
     'mult-comp':'Para multiplicar dos números de 2 cifras de cabeza.',
@@ -847,7 +848,7 @@
     'mult-square':'Al elevar al cuadrado; los que acaban en 5 son inmediatos.',
     'div-zeros':'Cuando dividendo y divisor comparten ceros: cancélalos primero.',
     'div-break':'Divisor pequeño (3–8): parte el número en trozos que salgan limpios.',
-    'div-factor':'Divisor con factores (12 = 3×4) o cuando el dividendo es un cuadrado.',
+    'div-factor':'Divisor que se parte en dos números de la tabla (12 = 3×4, 24 = 4×6): divide en dos pasos.',
     'pct-comp':'Casi cualquier %: combina 10% y 1% (40% = 4×10%, 3% = 3×1%).',
     'pct-estimate':'% incómodos sobre bases grandes cuando basta una buena estimación.'
   };
