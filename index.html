@@ -37,7 +37,7 @@
   /* Header (no fijo) */
   header.app{background:var(--paper);border-bottom:3px solid var(--red)}
   .bar{max-width:680px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
-  .bar .mark{width:30px;height:30px;border-radius:7px;background:var(--red);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+  .bar .mark{width:32px;height:32px;border-radius:8px;flex:none;object-fit:cover;display:block}
   .bar h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.01em;white-space:nowrap}
   .bar .sub{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
   .bar .spacer{flex:1}
@@ -245,7 +245,7 @@
 <body>
 <header class="app">
   <div class="bar">
-    <div class="mark">×</div>
+    <img class="mark" src="icon-192.png" alt="Case Math">
     <div style="min-width:0">
       <h1>Case Math</h1>
       <div class="sub">Mental math · case prep</div>
