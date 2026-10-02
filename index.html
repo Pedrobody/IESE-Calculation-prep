@@ -22,10 +22,11 @@
     --navh:60px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;height:100%}
+  html,body{margin:0;padding:0}
   body{
     font-family:var(--font); color:var(--ink); background:var(--bg); font-size:15px; line-height:1.5;
-    -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; min-height:100%;
+    -webkit-font-smoothing:antialiased; display:flex; flex-direction:column;
+    min-height:100vh; min-height:100dvh;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   }
   button{font-family:var(--font)}
