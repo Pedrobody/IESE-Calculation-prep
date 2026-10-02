@@ -395,7 +395,8 @@
     var p=d.prog;
     p.level=p.level||1; p.win=p.win||[]; p.xp=p.xp||0; p.solved=p.solved||0; p.correct=p.correct||0;
     p.bestStreak=p.bestStreak||0; p.maxLevel=p.maxLevel||1; p.ach=p.ach||{}; p.days=p.days||[]; p.byType=p.byType||{mult:0,div:0,pct:0};
-    delete d.free;                 // "Práctica libre" retirada de esta app
+    d.free=d.free||{left:{counts:[2],digits:[1,2,3,4,5,6,7,8,9]},right:{counts:[1],digits:[2,3,4,5,6,7,8,9]}};  // free-practice config
+    ['left','right'].forEach(function(k){ var s=d.free[k]; s.counts=(s.counts&&s.counts.length)?s.counts:[1]; s.digits=(s.digits&&s.digits.length)?s.digits:[1,2,3,4,5,6,7,8,9]; });
     d.stats=d.stats||{};
     d.stats.byStrat=d.stats.byStrat||{};   // {strat:{n,ok,sum}}
     d.stats.byOp=d.stats.byOp||{};         // {op:{n,ok,sum}}
@@ -592,9 +593,11 @@
   /* ============ ENTRENAR (adaptativo + libre) ============ */
   var WIN=8,PROMOTE=0.74,DEMOTE=0.42,MINSAMP=6;
   function perfOf(ok,time,target){ if(!ok)return 0; var r=time/target; if(r<=0.6)return 1; if(r<=1)return .85; if(r<=1.5)return .6; if(r<=2.5)return .3; return .15; }
+  var trainMode='adapt';
   function renderTrain(){
+    cancelAnimationFrame(raf);
     app.innerHTML = '<div id="tBody"></div>';
-    renderAdaptive();
+    if(trainMode==='free') renderFree(); else renderAdaptive();
   }
 
   function renderAdaptive(){
@@ -624,8 +627,10 @@
         '</div>'+
         '<div class="note">This meter is your <b>recent performance</b> (accuracy + speed of your last answers). It rises when you answer fast and falls when you miss or go slow; cross the right mark to level up, drop below the left mark to level down. Pausing protects your progress.</div>'+
       '</div>'+
-      '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px" id="achSum">🏅 Achievements — '+Object.keys(p.ach).length+'/'+ACHS.length+'</summary><div class="ach-grid" id="achGrid" style="margin-top:12px">'+achGridHTML()+'</div></details>';
+      '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px" id="achSum">🏅 Achievements — '+Object.keys(p.ach).length+'/'+ACHS.length+'</summary><div class="ach-grid" id="achGrid" style="margin-top:12px">'+achGridHTML()+'</div></details>'+
+      '<button class="btn ghost block" id="hToFree" style="margin-top:4px">🎛️ Free practice (choose your own digits)</button>';
 
+    $("#hToFree").onclick=function(){ cancelAnimationFrame(raf); trainMode='free'; renderTrain(); };
     var input=makeInput(function(){return $("#hAns");}, submit);
     function paintHUD(){ var L=LEVELS[Math.min(p.level,LEVELS.length)-1];
       $("#hLv").innerHTML=p.level+' <small>· '+esc(L.n)+'</small>';
@@ -686,6 +691,42 @@
     keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} else if(e.key===','||e.key==='.')input.press(','); };
     paintHUD(); next();
   }
+
+  /* ---------- Free practice: multiplication with digit selection ---------- */
+  function renderFree(){
+    var f=db.free; var ses={count:0,total:0,correct:0,cur:null,shownAt:0};
+    var countOpts=[1,2,3,4,5], digitOpts=[1,2,3,4,5,6,7,8,9];
+    function chipRow(side,key,opts){ return '<div class="chips" data-side="'+side+'" data-key="'+key+'">'+opts.map(function(v){return '<button class="chip '+(f[side][key].indexOf(v)>=0?'on':'')+'" data-val="'+v+'">'+v+'</button>';}).join('')+'</div>'; }
+    function sideBlock(side,title){ return '<div class="side"><h3 style="font-size:14px;margin:0 0 2px">'+title+'</h3><div class="sublabel">number of digits</div>'+chipRow(side,'counts',countOpts)+'<div class="sublabel">digits that can appear</div>'+chipRow(side,'digits',digitOpts)+'</div>'; }
+    $("#tBody").innerHTML=
+      '<div class="seg" style="margin-bottom:4px"><button class="" id="fToAdapt">🏆 Adaptive</button><button class="on">🎛️ Free practice</button></div>'+
+      '<details class="card"><summary style="cursor:pointer;font-weight:800;font-size:14px">⚙️ Configure multiplication</summary><div style="margin-top:12px">'+sideBlock('left','Left number')+sideBlock('right','Right number')+'<p class="note">Choose how many digits and which digits (1–9) can appear on each side. No levels or ranking here: pure practice.</p></div></details>'+
+      '<div class="card play">'+
+        '<div class="hud" style="margin:0 0 12px"><div class="c"><div class="lab">Problems</div><div class="val" id="fCount">0</div></div><div class="c"><div class="lab">Avg</div><div class="val" id="fAvg">—</div></div><div class="c"><div class="lab">Accuracy</div><div class="val" id="fAcc">—</div></div></div>'+
+        '<div class="problem" id="fProblem">—</div>'+
+        '<div class="answer empty" id="fAns">your answer</div>'+
+        '<div class="feedback" id="fFb">&nbsp;</div>'+
+        keypadHTML()+
+        '<div class="miniact"><button id="fSkip">Skip</button><button id="fReset">Reset session</button></div>'+
+      '</div>';
+    $("#fToAdapt").onclick=function(){ trainMode='adapt'; renderTrain(); };
+    document.querySelectorAll('#tBody .chips').forEach(function(row){ var side=row.dataset.side,key=row.dataset.key;
+      row.querySelectorAll('.chip').forEach(function(chip){ chip.onclick=function(){ var val=Number(chip.dataset.val),arr=f[side][key],i=arr.indexOf(val); if(i>=0){ if(arr.length>1)arr.splice(i,1);} else { arr.push(val); arr.sort(function(a,b){return a-b;}); } save(); row.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',f[side][key].indexOf(Number(c.dataset.val))>=0);}); }; });
+    });
+    function buildNum(side){ var nd=side.counts[Math.floor(Math.random()*side.counts.length)],s=''; for(var i=0;i<nd;i++)s+=String(side.digits[Math.floor(Math.random()*side.digits.length)]); return parseInt(s,10); }
+    var input=makeInput(function(){return $("#fAns");},submit);
+    function stats(){ $("#fCount").textContent=ses.count; $("#fAvg").innerHTML=ses.count?(ses.total/ses.count).toFixed(1)+'<small>s</small>':'—'; $("#fAcc").textContent=ses.count?Math.round(ses.correct/ses.count*100)+'%':'—'; }
+    function next(){ var a=buildNum(f.left),b=buildNum(f.right); ses.cur={a:a,b:b,ans:a*b}; $("#fProblem").textContent=fmt(a)+' × '+fmt(b); input.clear(); ses.shownAt=performance.now(); }
+    function submit(raw){ if(!ses.cur)return; var v=parseInt(String(raw).replace(/\D/g,''),10); if(isNaN(v))return; var t=(performance.now()-ses.shownAt)/1000; var ok=v===ses.cur.ans; ses.count++; ses.total+=t; if(ok)ses.correct++;
+      recordAttempt({op:'mult',strat:'free'}, ok, t, 0, 'free');
+      var fb=$("#fFb"); fb.className='feedback '+(ok?'ok':'bad'); fb.textContent=ok?'✓ '+fmt(ses.cur.a)+' × '+fmt(ses.cur.b)+' = '+fmt(ses.cur.ans)+' · '+t.toFixed(1)+'s':'✗ '+raw+' · was '+fmt(ses.cur.ans); save(); stats(); next(); }
+    $("#keypad").addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(b)input.press(b.dataset.k); });
+    $("#fSkip").onclick=function(){ $("#fFb").innerHTML='&nbsp;'; next(); };
+    $("#fReset").onclick=function(){ ses={count:0,total:0,correct:0,cur:null,shownAt:0}; stats(); next(); };
+    keydownHandler=function(e){ if(document.querySelector('.overlay.on'))return; if(e.key>='0'&&e.key<='9')input.press(e.key); else if(e.key==='Enter'){e.preventDefault();input.press('ok');} else if(e.key==='Backspace'){e.preventDefault();input.press('del');} };
+    stats(); next();
+  }
+
   function achGridHTML(){ var p=db.prog; return ACHS.map(function(a){ var on=!!p.ach[a.id]; return '<div class="ach '+(on?'':'locked')+'"><span class="ico">'+(on?a.ico:'🔒')+'</span><div><div class="t">'+esc(a.t)+(on?' ✓':'')+'</div><div class="d">'+esc(a.d)+'</div></div></div>'; }).join(''); }
   function refreshAch(){ var g=$("#achGrid"); if(g)g.innerHTML=achGridHTML(); var s=$("#achSum"); if(s)s.textContent='🏅 Achievements — '+Object.keys(db.prog.ach).length+'/'+ACHS.length; }
 
@@ -1029,30 +1070,46 @@
     return fetch(CFG.SUPABASE_URL+'/rest/v1/scores?select=nick,section,score,challenge_id,created_at&order=created_at.desc&limit=5000',{headers:sbHeaders()}).then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); }); }
   function barRows(items, labelFn, valFn){ var max=1; items.forEach(function(x){ var v=valFn(x); if(v>max)max=v; });
     return items.map(function(x){ var v=valFn(x), w=Math.round(v/max*100); return '<div class="pbar-row"><div class="pl">'+labelFn(x)+'</div><div class="pbar-track"><div class="pbar-fill" style="width:'+w+'%"></div></div><div class="pbar-val"><b>'+v+'</b></div></div>'; }).join(''); }
+  function dayBars(obj){ var days=Object.keys(obj||{}).sort().slice(-14); if(!days.length)return '<p class="note" style="margin:6px 0 0">No data.</p>';
+    return barRows(days,function(d){var dd=d.split("-");return '<span style="font-size:11px">'+(dd[2]+"/"+dd[1])+'</span>';},function(d){return obj[d];}); }
   function renderAdmin(){
     keydownHandler=null;
     app.innerHTML='<div class="sechead"><div><div class="kicker">Admin · usage</div><h2>Stats</h2></div><div class="rule"></div></div>'+
-      '<div class="card" id="adBody"><p class="note" style="margin:0">Loading usage data…</p></div>';
-    if(!sbReady()){ $("#adBody").innerHTML='<p class="note" style="margin:0">Supabase not configured.</p>'; return; }
+      '<div class="card" id="adUsers"><p class="note" style="margin:0">Loading users…</p></div>'+
+      '<div id="adScores"><div class="card"><p class="note" style="margin:0">Loading challenge data…</p></div></div>';
+    if(!sbReady()){ $("#adUsers").innerHTML='<p class="note" style="margin:0">Supabase not configured.</p>'; $("#adScores").innerHTML=''; return; }
+
+    // --- usuarios / uso (profiles, vía RPC admin) ---
+    sbRpc('mm_admin',{p_nick:db.auth.nick,p_pin:db.auth.pin}).then(function(a){
+      if(!a||!a.ok) throw new Error(a&&a.error||'rpc');
+      var mins=Math.round((a.total_seconds||0)/60), avgMin= a.total_users? Math.round((a.total_seconds||0)/a.total_users/60) : 0;
+      var secList=Object.keys(a.by_section||{}).map(function(s){return {s:s,n:a.by_section[s]};}).sort(function(x,y){return y.n-x.n;});
+      $("#adUsers").outerHTML=
+        '<div class="hud"><div class="c"><div class="lab">Total users</div><div class="val">'+a.total_users+'</div></div><div class="c"><div class="lab">New today</div><div class="val">'+a.new_today+'</div></div><div class="c"><div class="lab">Active today</div><div class="val">'+a.active_today+'</div></div></div>'+
+        '<div class="hud"><div class="c"><div class="lab">Active 7d</div><div class="val">'+a.active_7d+'</div></div><div class="c"><div class="lab">New 7d</div><div class="val">'+a.new_7d+'</div></div><div class="c"><div class="lab">Avg time/user</div><div class="val">'+avgMin+'<small>min</small></div></div></div>'+
+        '<div class="card"><span class="kicker">New users per day</span>'+dayBars(a.new_by_day)+'</div>'+
+        '<div class="card"><span class="kicker">Active users per day</span>'+dayBars(a.active_by_day)+'</div>'+
+        '<div class="card"><span class="kicker">Users by section</span>'+(secList.length?barRows(secList,function(x){return 'Section '+esc(x.s);},function(x){return x.n;}):'<p class="note" style="margin:6px 0 0">No data.</p>')+'</div>'+
+        '<div class="card"><span class="kicker">Overall</span><p class="note" style="margin:0">Total problems solved: <b>'+fmt(a.total_solved||0)+'</b> · total practice time: <b>'+fmt(mins)+' min</b> (~'+fmt(Math.round(mins/60))+' h).</p></div>';
+    }).catch(function(err){
+      $("#adUsers").innerHTML='<b>User stats not available yet.</b><p class="note" style="margin-bottom:0">Run <code>supabase-admin.sql</code> in the Supabase SQL editor to enable total/new/active users and time. ('+esc(err.message||'error')+')</p>';
+    });
+
+    // --- retos (scores, legibles con la clave pública) ---
     fetchAllScores().then(function(rows){
-      var today=todayISO(), players={}, sections={}, byDay={}, plays=rows.length, todayPlays=0, scoreSum=0;
+      var today=todayISO(), players={}, byDay={}, plays=rows.length, todayPlays=0, scoreSum=0;
       rows.forEach(function(r){ var k=(r.nick||'').trim().toLowerCase();
         if(!players[k]) players[k]={nick:r.nick,section:r.section,best:0};
         if(r.score>players[k].best){ players[k].best=r.score; players[k].section=r.section; }
-        var sec=r.section||'?'; (sections[sec]=sections[sec]||{})[k]=1;
-        var d=r.challenge_id||String(r.created_at||'').slice(0,10); byDay[d]=(byDay[d]||0)+1; if(d===today)todayPlays++;
-        scoreSum+=r.score; });
-      var uniq=Object.keys(players).length, avg=plays?Math.round(scoreSum/plays):0;
-      var secList=Object.keys(sections).map(function(s){return {s:s,n:Object.keys(sections[s]).length};}).sort(function(a,b){return b.n-a.n;});
-      var days=Object.keys(byDay).sort().slice(-12);
+        var d=r.challenge_id||String(r.created_at||'').slice(0,10); byDay[d]=(byDay[d]||0)+1; if(d===today)todayPlays++; scoreSum+=r.score; });
       var top=Object.keys(players).map(function(k){return players[k];}).sort(function(a,b){return b.best-a.best;}).slice(0,12);
       var topRows=top.map(function(p,i){return '<tr><td class="pos">'+(i+1)+'</td><td>'+esc(p.nick)+'<span class="sec">'+esc(p.section)+'</span></td><td style="text-align:right;font-weight:800">'+fmt(p.best)+'</td></tr>';}).join('');
-      app.innerHTML='<div class="sechead"><div><div class="kicker">Admin · usage</div><h2>Stats</h2></div><div class="rule"></div></div>'+
-        '<div class="hud"><div class="c"><div class="lab">Players</div><div class="val">'+uniq+'</div></div><div class="c"><div class="lab">Plays</div><div class="val">'+plays+'</div></div><div class="c"><div class="lab">Today</div><div class="val">'+todayPlays+'</div></div></div>'+
-        '<div class="card"><span class="kicker">Players by section</span>'+(secList.length?barRows(secList,function(x){return 'Section '+esc(x.s);},function(x){return x.n;}):'<p class="note" style="margin:6px 0 0">No data.</p>')+'</div>'+
-        '<div class="card"><span class="kicker">Plays per day</span>'+(days.length?barRows(days,function(d){var dd=d.split("-");return '<span style="font-size:11px">'+(dd[2]+"/"+dd[1])+'</span>';},function(d){return byDay[d];}):'<p class="note" style="margin:6px 0 0">No data.</p>')+'</div>'+
-        '<div class="card"><span class="kicker">Top players (best challenge score)</span>'+(topRows?'<table class="lb"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Best</th></tr></thead><tbody>'+topRows+'</tbody></table>':'<p class="note" style="margin:6px 0 0">No data.</p>')+'<p class="note">Average score across all plays: <b>'+fmt(avg)+'</b>. Data reflects Daily Challenge submissions.</p></div>';
-    }).catch(function(err){ var b=$("#adBody"); if(b)b.innerHTML='<p class="note" style="margin:0">⚠️ '+esc(err.message||'error')+'</p>'; });
+      $("#adScores").innerHTML=
+        '<div class="sechead" style="margin-top:20px"><div><div class="kicker">Daily Challenge</div><h2 style="font-size:20px">Competition</h2></div><div class="rule"></div></div>'+
+        '<div class="hud"><div class="c"><div class="lab">Challenge plays</div><div class="val">'+plays+'</div></div><div class="c"><div class="lab">Players</div><div class="val">'+Object.keys(players).length+'</div></div><div class="c"><div class="lab">Plays today</div><div class="val">'+todayPlays+'</div></div></div>'+
+        '<div class="card"><span class="kicker">Challenge plays per day</span>'+dayBars(byDay)+'</div>'+
+        '<div class="card"><span class="kicker">Top players (best challenge score)</span>'+(topRows?'<table class="lb"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Best</th></tr></thead><tbody>'+topRows+'</tbody></table>':'<p class="note" style="margin:6px 0 0">No data.</p>')+'<p class="note">Average score across all plays: <b>'+(plays?fmt(Math.round(scoreSum/plays)):0)+'</b>.</p></div>';
+    }).catch(function(err){ $("#adScores").innerHTML='<div class="card"><p class="note" style="margin:0">⚠️ '+esc(err.message||'error')+'</p></div>'; });
   }
 
   /* ============ NAV + arranque ============ */
